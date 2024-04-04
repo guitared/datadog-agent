@@ -219,6 +219,9 @@ variables:
   KITCHEN_AZURE_TENANT_ID_SSM_NAME: ci.datadog-agent.azure_kitchen_tenant_id  # agent-developer-tools
   GITLAB_SCHEDULER_TOKEN_SSM_NAME: ci.datadog-agent.gitlab_pipelines_scheduler_token  # ci-cd
   GITLAB_READ_API_TOKEN_SSM_NAME: ci.datadog-agent.gitlab_read_api_token  # ci-cd
+  GITHUB_APP_KEY_SSM_NAME: ci.datadog-agent.platform-github-app-key  # agent-ci-experience
+  GITHUB_APP_ID_SSM_NAME: ci.datadog-agent.platform-github-app-id  # agent-ci-experience
+  GITHUB_APP_INSTALLATION_ID_SSM_NAME: ci.datadog-agent.platform-github-app-installation-id  # agent-ci-experience
   INSTALL_SCRIPT_API_KEY_SSM_NAME: ci.agent-linux-install-script.datadog_api_key  # agent-build-and-releases
   JIRA_READ_API_TOKEN_SSM_NAME: ci.datadog-agent.jira_read_api_token  # agent-ci-experience
   MACOS_GITHUB_APP_ID_SSM_NAME: ci.datadog-agent.macos_github_app_id  # agent-ci-experience
