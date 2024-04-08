@@ -4085,6 +4085,30 @@ func (ev *Event) GetNetworkSourcePort() uint16 {
 	return ev.NetworkContext.Source.Port
 }
 
+// GetOndemandArg1Str returns the value of the field, resolving if necessary
+func (ev *Event) GetOndemandArg1Str() string {
+	if ev.GetEventType().String() != "ondemand" {
+		return ""
+	}
+	return ev.FieldHandlers.ResolveArg1Str(ev, &ev.OnDemand)
+}
+
+// GetOndemandArg2Str returns the value of the field, resolving if necessary
+func (ev *Event) GetOndemandArg2Str() string {
+	if ev.GetEventType().String() != "ondemand" {
+		return ""
+	}
+	return ev.FieldHandlers.ResolveArg2Str(ev, &ev.OnDemand)
+}
+
+// GetOndemandName returns the value of the field, resolving if necessary
+func (ev *Event) GetOndemandName() string {
+	if ev.GetEventType().String() != "ondemand" {
+		return ""
+	}
+	return ev.FieldHandlers.ResolveOnDemandName(ev, &ev.OnDemand)
+}
+
 // GetOpenFileChangeTime returns the value of the field, resolving if necessary
 func (ev *Event) GetOpenFileChangeTime() uint64 {
 	if ev.GetEventType().String() != "open" {

@@ -26,6 +26,7 @@ import (
 type EBPFFieldHandlers struct {
 	config    *config.Config
 	resolvers *resolvers.EBPFResolvers
+	onDemand  *OnDemandProbesManager
 }
 
 // ResolveProcessCacheEntry queries the ProcessResolver to retrieve the ProcessContext of the event
@@ -589,4 +590,23 @@ func (fh *EBPFFieldHandlers) ResolveSyscallCtxArgsInt2(ev *model.Event, e *model
 func (fh *EBPFFieldHandlers) ResolveSyscallCtxArgsInt3(ev *model.Event, e *model.SyscallContext) int {
 	fh.ResolveSyscallCtxArgs(ev, e)
 	return int(e.IntArg3)
+}
+
+// ResolveOnDemandName resolves the on-demand event name
+func (fh *EBPFFieldHandlers) ResolveOnDemandName(_ *model.Event, e *model.OnDemandEvent) string {
+	return fh.onDemand.hookPoints[e.ID].Name
+}
+
+// ResolveArg1Str resolves the string value of the first argument of hooked function
+func (fh *EBPFFieldHandlers) ResolveArg1Str(_ *model.Event, e *model.OnDemandEvent) string {
+	data := e.Data[0:64]
+	s := model.NullTerminatedString(data)
+	return s
+}
+
+// ResolveArg2Str resolves the string value of the second argument of hooked function
+func (fh *EBPFFieldHandlers) ResolveArg2Str(_ *model.Event, e *model.OnDemandEvent) string {
+	data := e.Data[64:128]
+	s := model.NullTerminatedString(data)
+	return s
 }
