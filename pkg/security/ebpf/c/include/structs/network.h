@@ -83,4 +83,15 @@ struct network_context_t {
     u16 l4_protocol;
 };
 
+struct raw_packet_t {
+    struct kevent_t event;
+    struct process_context_t process;
+    struct span_context_t span;
+    struct container_context_t container;
+    struct namespaced_flow_t flow;
+
+    int len;
+    char data[4096];
+};
+
 #endif

@@ -14,6 +14,11 @@ __attribute__((always_inline)) struct dns_event_t *get_dns_event() {
     return bpf_map_lookup_elem(&dns_event, &key);
 }
 
+__attribute__((always_inline)) struct raw_packet_t *get_raw_packet_event() {
+    u32 key = 0;
+    return bpf_map_lookup_elem(&raw_packet, &key);
+}
+
 __attribute__((always_inline)) struct dns_event_t *reset_dns_event(struct __sk_buff *skb, struct packet_t *pkt) {
     struct dns_event_t *evt = get_dns_event();
     if (evt == NULL) {

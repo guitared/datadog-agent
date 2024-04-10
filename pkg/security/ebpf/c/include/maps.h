@@ -96,4 +96,7 @@ BPF_PROG_ARRAY(dentry_resolver_tracepoint_progs, 2)
 BPF_PROG_ARRAY(classifier_router, 100)
 BPF_PROG_ARRAY(sys_exit_progs, 64)
 
+
+BPF_PERCPU_ARRAY_MAP(raw_packet, struct raw_packet_t, EVENT_MAX)
+
 #endif

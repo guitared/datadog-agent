@@ -585,3 +585,9 @@ func (dfh *FakeFieldHandlers) ResolveProcessCacheEntry(_ *Event) (*ProcessCacheE
 func (dfh *FakeFieldHandlers) ResolveContainerContext(_ *Event) (*ContainerContext, bool) {
 	return nil, false
 }
+
+// RawPacketEvent represents a packet event
+type RawPacketEvent struct {
+	Len  uint32
+	Data []byte
+}

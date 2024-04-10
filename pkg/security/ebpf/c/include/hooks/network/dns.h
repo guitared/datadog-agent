@@ -58,6 +58,56 @@ __attribute__((always_inline)) int is_dns_request_parsing_done(struct __sk_buff 
     return 1;
 }
 
+__attribute__((always_inline)) int handle_raw_packet(struct __sk_buff *skb, struct packet_t *pkt) {
+    struct raw_packet_t *evt = get_raw_packet_event();
+    if (evt == NULL) {
+        // should never happen
+        return ACT_OK;
+    }
+
+    bpf_printk("ROOOO");
+
+    unsigned int size = (skb->data_end-skb->data) || 1;
+    if (size == 0 || size > sizeof(evt->data)) {
+        return ACT_OK;
+    }
+
+  /*  size &= sizeof(evt->data)-1;
+    if (size == 0) {
+         return ACT_OK;
+    }*/
+
+    if (bpf_skb_load_bytes(skb, 0, evt->data, size) < 0) {
+        return ACT_OK;
+    }
+    evt->len = size;
+
+    bpf_printk("ROOOO pas mal: %d/ %d", evt->data[0], size);
+
+    // process context
+    fill_network_process_context(&evt->process, pkt);
+
+    struct proc_cache_t *entry = get_proc_cache(evt->process.pid);
+    if (entry == NULL) {
+        evt->container.container_id[0] = 0;
+    } else {
+        copy_container_id_no_tracing(entry->container.container_id, &evt->container.container_id);
+    }
+
+    evt->flow = pkt->translated_ns_flow;
+
+    unsigned int size2 = offsetof(struct raw_packet_t, data) + skb->len;
+    if (size2 > sizeof(struct raw_packet_t)) {
+        bpf_printk("Bye bye");
+        return ACT_OK;
+    }
+
+    bpf_printk("Youpi");
+    send_event_with_size_ptr(skb, EVENT_RAW_PACKET, evt, size2);
+
+    return ACT_OK;
+}
+
 SEC("classifier/dns_request")
 int classifier_dns_request(struct __sk_buff *skb) {
     struct packet_t *pkt = get_packet();
@@ -66,11 +116,15 @@ int classifier_dns_request(struct __sk_buff *skb) {
         return ACT_OK;
     }
 
+    bpf_printk("11111");
+
     struct dnshdr header = {};
     if (bpf_skb_load_bytes(skb, pkt->offset, &header, sizeof(header)) < 0) {
         return ACT_OK;
     }
     pkt->offset += sizeof(header);
+
+    bpf_printk("22222");
 
     struct dns_event_t *evt = reset_dns_event(skb, pkt);
     if (evt == NULL) {
@@ -78,6 +132,8 @@ int classifier_dns_request(struct __sk_buff *skb) {
     }
     evt->qdcount = htons(header.qdcount);
     evt->id = htons(header.id);
+
+    bpf_printk("333333");
 
     // tail call to the dns request parser
     tail_call_to_classifier(skb, DNS_REQUEST_PARSER);
@@ -94,7 +150,7 @@ int classifier_dns_request_parser(struct __sk_buff *skb) {
         return ACT_OK;
     }
 
-    struct dns_event_t *evt = get_dns_event();
+  /*  struct dns_event_t *evt = get_dns_event();
     if (evt == NULL) {
         // should never happen
         return ACT_OK;
@@ -117,7 +173,9 @@ int classifier_dns_request_parser(struct __sk_buff *skb) {
 
     if (!is_dns_request_parsing_done(skb, pkt)) {
         tail_call_to_classifier(skb, DNS_REQUEST_PARSER);
-    }
+    }*/
+
+    handle_raw_packet(skb, pkt);
 
     return ACT_OK;
 }

@@ -91,6 +91,8 @@ const (
 	SyscallsEventType
 	// IMDSEventType is sent when an IMDS request or qnswer is captured
 	IMDSEventType
+	// RawPacketEventType raw packet event
+	RawPacketEventType
 	// MaxKernelEventType is used internally to get the maximum number of kernel events.
 	MaxKernelEventType
 

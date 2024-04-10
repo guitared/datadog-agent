@@ -1239,3 +1239,24 @@ func (e *AnomalyDetectionSyscallEvent) UnmarshalBinary(data []byte) (int, error)
 	e.SyscallID = Syscall(binary.NativeEndian.Uint64(data[0:8]))
 	return 8, nil
 }
+
+// UnmarshalBinary unmarshals a binary representation of itself
+func (e *RawPacketEvent) UnmarshalBinary(data []byte) (int, error) {
+	if len(data) < 38+4 {
+		fmt.Printf("PAS LAAAA: %d\n", len(data))
+		return 0, ErrNotEnoughData
+	}
+	data = data[38+4:]
+
+	e.Len = binary.NativeEndian.Uint32(data)
+	if int(e.Len) > len(data[4:]) {
+		fmt.Printf("LAAAAAAA: %d\n", e.Len)
+		return 0, ErrNotEnoughData
+	}
+	e.Data = make([]byte, e.Len)
+	copy(e.Data, data[4:e.Len])
+
+	fmt.Printf(">>>>>>>>>>> : %d\n", e.Data[0])
+
+	return 38 + 4 + 4 + int(e.Len), nil
+}
