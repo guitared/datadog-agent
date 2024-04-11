@@ -67,19 +67,14 @@ __attribute__((always_inline)) int handle_raw_packet(struct __sk_buff *skb, stru
 
     bpf_printk("ROOOO %d", skb->len);
 
-    unsigned int size = skb->len;
-    if (size <= 0 || size > sizeof(evt->data)) {
-        return ACT_OK;
-    }
-
     for(int i=sizeof(evt->data);i>14+20+20;i--) {
         if (bpf_skb_load_bytes(skb, 0, evt->data, i) == 0) {
             break;
         }
     }
-    evt->len = size;
+    evt->len = skb->len;
 
-    bpf_printk("ROOOO pas mal: %d/ %d", evt->data[0], size);
+    bpf_printk("ROOOO pas mal: %d/ %d", evt->data[0], evt->len);
 
     // process context
     fill_network_process_context(&evt->process, pkt);
