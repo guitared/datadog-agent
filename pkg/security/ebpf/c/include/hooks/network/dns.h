@@ -60,25 +60,22 @@ __attribute__((always_inline)) int is_dns_request_parsing_done(struct __sk_buff 
 
 __attribute__((always_inline)) int handle_raw_packet(struct __sk_buff *skb, struct packet_t *pkt) {
     struct raw_packet_t *evt = get_raw_packet_event();
-    if (evt == NULL) {
+    if ((evt == NULL) || (skb == NULL)) {
         // should never happen
         return ACT_OK;
     }
 
-    bpf_printk("ROOOO");
+    bpf_printk("ROOOO %d", skb->len);
 
-    unsigned int size = (skb->data_end-skb->data) || 1;
-    if (size == 0 || size > sizeof(evt->data)) {
+    unsigned int size = skb->len;
+    if (size <= 0 || size > sizeof(evt->data)) {
         return ACT_OK;
     }
 
-  /*  size &= sizeof(evt->data)-1;
-    if (size == 0) {
-         return ACT_OK;
-    }*/
-
-    if (bpf_skb_load_bytes(skb, 0, evt->data, size) < 0) {
-        return ACT_OK;
+    for(int i=sizeof(evt->data);i>14+20+20;i--) {
+        if (bpf_skb_load_bytes(skb, 0, evt->data, i) == 0) {
+            break;
+        }
     }
     evt->len = size;
 
