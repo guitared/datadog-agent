@@ -12,9 +12,11 @@ import (
 	"time"
 
 	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 
 	"github.com/DataDog/datadog-agent/pkg/network/config"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
 	"github.com/DataDog/datadog-agent/pkg/telemetry"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
@@ -76,6 +78,24 @@ type packetSource interface {
 
 	// Close closes the packet source
 	Close()
+}
+
+type RawPacketSource struct {
+	ch chan *model.Event
+}
+
+func (rp *RawPacketSource) PacketType() gopacket.LayerType {
+	return layers.LayerTypeEthernet
+}
+
+func (rp *RawPacketSource) VisitPackets(cancel <-chan struct{}, visitor func(data []byte, timestamp time.Time) error) error {
+	ev := <-rp.ch
+	visitor(ev.RawPacket.Data, time.Now())
+	return nil
+}
+
+func (rp *RawPacketSource) Close() {
+
 }
 
 // newSocketFilterSnooper returns a new socketFilterSnooper

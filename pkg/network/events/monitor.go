@@ -76,10 +76,20 @@ type ProcessEventHandler interface {
 	HandleProcessEvent(*Process)
 }
 
+type PacketEventHandler interface {
+	HandlePacket(ev *model.Event)
+}
+
 // RegisterHandler registers a handler function for getting process events
 func RegisterHandler(handler ProcessEventHandler) {
 	m := theMonitor.Load().(*eventMonitor)
 	m.RegisterHandler(handler)
+}
+
+// RegisterHandler registers a handler function for getting process events
+func RegisterPacketHandler(handler PacketEventHandler) {
+	m := theMonitor.Load().(*eventMonitor)
+	m.RegisterPacketHandler(handler)
 }
 
 // UnregisterHandler unregisters a handler function for getting process events
@@ -96,15 +106,21 @@ func (h *eventConsumerWrapper) HandleEvent(ev any) {
 		return
 	}
 
-	evProcess, ok := ev.(*Process)
-	if !ok {
-		log.Errorf("Event is not a process")
-		return
-	}
-
-	m := theMonitor.Load()
-	if m != nil {
-		m.(*eventMonitor).HandleEvent(evProcess)
+	switch ev.(type) {
+	case *Process:
+		m := theMonitor.Load()
+		if m != nil {
+			m.(*eventMonitor).HandleEvent(ev.(*Process))
+		}
+	case *model.Event:
+		e := ev.(*model.Event)
+		m := theMonitor.Load()
+		if m != nil {
+			if e.GetEventType() == model.RawPacketEventType {
+				m.(*eventMonitor).HandlePacket(e)
+			}
+		}
+	default:
 	}
 }
 
@@ -121,6 +137,10 @@ func (h *eventConsumerWrapper) Copy(ev *model.Event) any {
 	}
 	if ev.GetEventType() == model.ForkEventType {
 		processStartTime = ev.GetProcessForkTime()
+	}
+
+	if ev.GetEventType() == model.RawPacketEventType {
+		return ev
 	}
 
 	p := &Process{
@@ -153,6 +173,7 @@ func (h *eventConsumerWrapper) EventTypes() []model.EventType {
 	return []model.EventType{
 		model.ForkEventType,
 		model.ExecEventType,
+		model.RawPacketEventType,
 	}
 }
 
@@ -176,7 +197,8 @@ func Consumer() sprobe.EventConsumerInterface {
 type eventMonitor struct {
 	sync.Mutex
 
-	handlers []ProcessEventHandler
+	handlers      []ProcessEventHandler
+	packetHandler PacketEventHandler
 }
 
 func newEventMonitor() (*eventMonitor, error) {
@@ -190,6 +212,17 @@ func (e *eventMonitor) HandleEvent(ev *Process) {
 	for _, h := range e.handlers {
 		h.HandleProcessEvent(ev)
 	}
+}
+
+func (e *eventMonitor) HandlePacket(ev *model.Event) {
+	e.Lock()
+	defer e.Unlock()
+
+	e.packetHandler.HandlePacket(ev)
+}
+
+func (e *eventMonitor) RegisterPacketHandler(handler PacketEventHandler) {
+	e.packetHandler = handler
 }
 
 func (e *eventMonitor) RegisterHandler(handler ProcessEventHandler) {

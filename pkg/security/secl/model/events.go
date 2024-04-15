@@ -228,7 +228,8 @@ func (t EventType) String() string {
 		return "syscalls"
 	case IMDSEventType:
 		return "imds"
-
+	case RawPacketEventType:
+		return "raw_packet"
 	case CustomLostReadEventType:
 		return "lost_events_read"
 	case CustomLostWriteEventType:

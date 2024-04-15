@@ -33,7 +33,7 @@ import (
 
 var (
 	// allowedEventTypes defines allowed event type for consumers
-	allowedEventTypes = []model.EventType{model.ForkEventType, model.ExecEventType, model.ExitEventType}
+	allowedEventTypes = []model.EventType{model.ForkEventType, model.ExecEventType, model.ExitEventType, model.RawPacketEventType}
 )
 
 // Opts defines options that can be used for the eventmonitor

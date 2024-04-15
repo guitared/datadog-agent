@@ -40,6 +40,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/process/procutil"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	timeresolver "github.com/DataDog/datadog-agent/pkg/security/resolvers/time"
+	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
 	"github.com/DataDog/datadog-agent/pkg/telemetry"
 	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -101,7 +102,11 @@ type Tracer struct {
 
 	timeResolver *timeresolver.Resolver
 
+<<<<<<< HEAD
 	telemetryComp telemetryComponent.Component
+=======
+	rawPacketChan chan *model.Event
+>>>>>>> c19ef0c0db92 (rawpacket source)
 }
 
 // NewTracer creates a Tracer
@@ -186,7 +191,9 @@ func newTracer(cfg *config.Config, telemetryComponent telemetryComponent.Compone
 		log.Info("gateway lookup enabled")
 	}
 
-	tr.reverseDNS = newReverseDNS(cfg, telemetryComponent)
+	tr.rawPacketChan = make(chan *model.Event, 1000)
+
+	tr.reverseDNS = newReverseDNS(cfg, telemetryComponent, tr.rawPacketChan)
 	tr.usmMonitor = newUSMMonitor(cfg, tr.ebpfTracer)
 
 	if cfg.EnableProcessEventMonitoring {
@@ -204,6 +211,8 @@ func newTracer(cfg *config.Config, telemetryComponent telemetryComponent.Compone
 		}
 
 		events.RegisterHandler(tr.processCache)
+
+		events.RegisterPacketHandler(tr)
 	}
 
 	tr.sourceExcludes = network.ParseConnectionFilters(cfg.ExcludedSourceConnections)
@@ -222,6 +231,13 @@ func newTracer(cfg *config.Config, telemetryComponent telemetryComponent.Compone
 	)
 
 	return tr, nil
+}
+
+func (tr *Tracer) HandlePacket(ev *model.Event) {
+	select {
+	case tr.rawPacketChan <- ev:
+	default:
+	}
 }
 
 // start starts the tracer. This function is present to separate
@@ -280,12 +296,20 @@ func newConntracker(cfg *config.Config, telemetryComponent telemetryComponent.Co
 	return nil, fmt.Errorf("error initializing conntracker: %s. set network_config.ignore_conntrack_init_failure to true to ignore conntrack failures on startup", err)
 }
 
+<<<<<<< HEAD
 func newReverseDNS(c *config.Config, telemetrycomp telemetryComponent.Component) dns.ReverseDNS {
+=======
+func newReverseDNS(c *config.Config, ch chan *model.Event) dns.ReverseDNS {
+>>>>>>> c19ef0c0db92 (rawpacket source)
 	if !c.DNSInspection {
 		return dns.NewNullReverseDNS()
 	}
 
+<<<<<<< HEAD
 	rdns, err := dns.NewReverseDNS(c, telemetrycomp)
+=======
+	rdns, err := dns.NewReverseDNS(c, ch)
+>>>>>>> c19ef0c0db92 (rawpacket source)
 	if err != nil {
 		log.Errorf("could not instantiate dns inspector: %s", err)
 		return dns.NewNullReverseDNS()
