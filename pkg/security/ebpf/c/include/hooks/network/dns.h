@@ -65,11 +65,23 @@ __attribute__((always_inline)) int handle_raw_packet(struct __sk_buff *skb, stru
         return ACT_OK;
     }
 
-    for(int i=sizeof(evt->data);i>14+20+20;i--) {
-        if (bpf_skb_load_bytes(skb, 0, evt->data, i) == 0) {
-            break;
-        }
+    asm ("r1 = *(u32 *)(%[skb] + %[len_offset])\n\t"
+         "if r1 <= 0 goto +1\n\t"
+         "if r1 < %[limit] goto +2\n\t"
+         "r0 = 0\n\t"
+         "exit\n\t"
+         :
+         : [skb]"r"(skb), [len_offset]"i"(offsetof(struct __sk_buff, len)), [limit]"i"(sizeof(evt->data)));
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wuninitialized"
+    u32 len;
+    asm ("r4 = r1");
+    if (bpf_skb_load_bytes(skb, 0, evt->data, len) < 0) {
+        return ACT_OK;
     }
+#pragma clang diagnostic pop
+
     evt->len = skb->len;
 
     // process context
