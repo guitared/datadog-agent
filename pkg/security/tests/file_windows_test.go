@@ -141,7 +141,7 @@ func TestWriteFileEvent(t *testing.T) {
 	// ebpftest.LogLevel(t, "info")
 	cfn := &rules.RuleDefinition{
 		ID:         "test_write_file",
-		Expression: `write.file.name =~ "test.bad" && write.file.path =~ "C:\Temp\**"`,
+		Expression: `write.file.name =~ "test.bad" && write.file.path =~ "C:\Temp\**" && write.file.device_path != "toto"`,
 	}
 	opts := testOpts{
 		enableFIM: true,
