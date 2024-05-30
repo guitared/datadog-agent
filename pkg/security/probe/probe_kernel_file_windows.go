@@ -541,6 +541,7 @@ func (wp *WindowsProbe) parseReadArgs(e *etw.DDEventRecord) (*readArgs, error) {
 	}
 
 	if ra.fileName == "" {
+		fmt.Printf("Dropping write event with empty path: %d\n", ra.fileObject)
 		return nil, errEmptyPath
 	}
 
