@@ -26,7 +26,9 @@ func RegisterLiveness(name string) *Handle {
 
 // RegisterStartup registers a component for startup check, returns a token
 func RegisterStartup(name string) *Handle {
+	startupOnlyCatalog.Lock()
 	startupOnlyCatalog.startup = true
+	startupOnlyCatalog.Unlock()
 	return startupOnlyCatalog.register(name)
 }
 
