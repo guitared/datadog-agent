@@ -1,6 +1,6 @@
 module github.com/datadog-agent/DataDog/comp/otelcol/collector-contrib/impl
 
-go 1.21.0
+go 1.21.7
 
 replace (
 	github.com/DataDog/datadog-agent/comp/core/config => ../../../core/config
@@ -61,7 +61,7 @@ replace (
 )
 
 require (
-	github.com/DataDog/datadog-agent/comp/otelcol/collector-contrib/def v0.55.0-rc.1
+	github.com/DataDog/datadog-agent/comp/otelcol/collector-contrib/def v0.55.0-rc.2
 	github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector v0.102.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/connector/datadogconnector v0.102.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/connector/exceptionsconnector v0.102.0
