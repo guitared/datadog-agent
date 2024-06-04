@@ -775,6 +775,7 @@ require (
 	github.com/Code-Hex/go-generics-cache v1.3.1 // indirect
 	github.com/DataDog/datadog-agent/comp/core/flare/builder v0.55.0-rc.3 // indirect
 	github.com/DataDog/datadog-agent/comp/otelcol/extension/impl v0.0.0-20240603132256-facb52fb471b // indirect
+	github.com/DataDog/datadog-agent/comp/otelcol/extension/impl v0.0.0-20240604082635-2b7f7b50bc67 // indirect
 	github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/metricsclient v0.55.0-rc.3 // indirect
 	github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/statsprocessor v0.0.0-20240525065430-d0b647bcb646 // indirect
 	github.com/DataDog/datadog-agent/pkg/logs/status/statusinterface v0.55.0-rc.3 // indirect
@@ -1371,3 +1372,5 @@ replace (
 
 // Prevent a false-positive detection by the Google and Ikarus security vendors on VirusTotal
 exclude go.opentelemetry.io/proto/otlp v1.1.0
+
+replace github.com/DataDog/datadog-agent/comp/otelcol/extension/impl => /Users/jaime.fullaondo/dd/datadog-agent/comp/otelcol/extension/impl
