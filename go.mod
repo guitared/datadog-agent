@@ -774,7 +774,6 @@ require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.23.0 // indirect
 	github.com/Code-Hex/go-generics-cache v1.3.1 // indirect
 	github.com/DataDog/datadog-agent/comp/core/flare/builder v0.55.0-rc.3 // indirect
-	github.com/DataDog/datadog-agent/comp/otelcol/extension/impl v0.0.0-20240603132256-facb52fb471b // indirect
 	github.com/DataDog/datadog-agent/comp/otelcol/extension/impl v0.0.0-20240604082635-2b7f7b50bc67 // indirect
 	github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/metricsclient v0.55.0-rc.3 // indirect
 	github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/statsprocessor v0.0.0-20240525065430-d0b647bcb646 // indirect
