@@ -89,9 +89,15 @@ func (rp *RawPacketSource) PacketType() gopacket.LayerType {
 }
 
 func (rp *RawPacketSource) VisitPackets(cancel <-chan struct{}, visitor func(data []byte, timestamp time.Time) error) error {
-	ev := <-rp.ch
-	visitor(ev.RawPacket.Data, time.Now())
-	return nil
+	for {
+		select {
+		case ev := <-rp.ch:
+			//	fmt.Printf("EBPF PACKET\n")
+			visitor(ev.RawPacket.Data, time.Now())
+		default:
+			return nil
+		}
+	}
 }
 
 func (rp *RawPacketSource) Close() {

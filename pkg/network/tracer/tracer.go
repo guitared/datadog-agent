@@ -191,9 +191,13 @@ func newTracer(cfg *config.Config, telemetryComponent telemetryComponent.Compone
 		log.Info("gateway lookup enabled")
 	}
 
-	tr.rawPacketChan = make(chan *model.Event, 1000)
+	if cfg.TCRawPacketEnabled {
+		tr.rawPacketChan = make(chan *model.Event, 1000)
+		tr.reverseDNS = newReverseDNS(cfg, nil, tr.rawPacketChan)
+	} else {
+		tr.reverseDNS = newReverseDNS(cfg, nil, nil)
+	}
 
-	tr.reverseDNS = newReverseDNS(cfg, telemetryComponent, tr.rawPacketChan)
 	tr.usmMonitor = newUSMMonitor(cfg, tr.ebpfTracer)
 
 	if cfg.EnableProcessEventMonitoring {
@@ -212,7 +216,10 @@ func newTracer(cfg *config.Config, telemetryComponent telemetryComponent.Compone
 
 		events.RegisterHandler(tr.processCache)
 
-		events.RegisterPacketHandler(tr)
+		// NOTE(safchain) register handler
+		if cfg.TCRawPacketEnabled {
+			events.RegisterPacketHandler(tr)
+		}
 	}
 
 	tr.sourceExcludes = network.ParseConnectionFilters(cfg.ExcludedSourceConnections)

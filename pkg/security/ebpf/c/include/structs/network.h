@@ -91,7 +91,7 @@ struct raw_packet_t {
     struct namespaced_flow_t flow;
 
     int len;
-    char data[9000];
+    char data[1500];
 };
 
 #endif

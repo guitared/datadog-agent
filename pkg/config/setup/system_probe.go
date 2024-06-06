@@ -174,6 +174,7 @@ func InitSystemProbeConfig(cfg pkgconfigmodel.Config) {
 	cfg.SetDefault(join(netNS, "collect_tcp_v6"), true)
 	cfg.SetDefault(join(netNS, "collect_udp_v4"), true)
 	cfg.SetDefault(join(netNS, "collect_udp_v6"), true)
+	cfg.SetDefault(join(netNS, "tc_raw_packet.enabled"), false)
 
 	cfg.BindEnvAndSetDefault(join(spNS, "offset_guess_threshold"), int64(defaultOffsetThreshold))
 

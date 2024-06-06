@@ -296,6 +296,9 @@ type Config struct {
 	// BypassEnabled is used in tests only.
 	// It enables a ebpf-manager feature to bypass programs on-demand for controlled visibility.
 	BypassEnabled bool
+
+	// TCRawPacketEnabled enable the TC raw packet
+	TCRawPacketEnabled bool
 }
 
 func join(pieces ...string) string {
@@ -311,6 +314,7 @@ func New() *Config {
 		Config: *ebpf.NewConfig(),
 
 		NPMEnabled:               cfg.GetBool(join(netNS, "enabled")),
+		TCRawPacketEnabled:       cfg.GetBool(join(netNS, "tc_raw_packet.enabled")),
 		ServiceMonitoringEnabled: cfg.GetBool(join(smNS, "enabled")),
 
 		CollectTCPv4Conns: cfg.GetBool(join(netNS, "collect_tcp_v4")),
