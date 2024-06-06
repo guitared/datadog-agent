@@ -26,6 +26,7 @@ import (
 	compdef "github.com/DataDog/datadog-agent/comp/def"
 	collectorcontrib "github.com/DataDog/datadog-agent/comp/otelcol/collector-contrib/def"
 	collector "github.com/DataDog/datadog-agent/comp/otelcol/collector/def"
+	ddextension "github.com/DataDog/datadog-agent/comp/otelcol/extension/impl"
 	"github.com/DataDog/datadog-agent/comp/otelcol/logsagentpipeline"
 	"github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/exporter/datadogexporter"
 	"github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/exporter/serializerexporter"
@@ -102,6 +103,7 @@ func NewComponent(reqs Requires) (Provides, error) {
 				factories.Exporters[datadogexporter.Type] = datadogexporter.NewFactory(reqs.Serializer, nil, reqs.SourceProvider)
 			}
 			factories.Processors[infraattributesprocessor.Type] = infraattributesprocessor.NewFactory(reqs.Tagger)
+			factories.Extensions[ddextension.Type] = ddextension.NewFactory(reqs.Provider)
 			return factories, nil
 		},
 		ConfigProviderSettings: otelcol.ConfigProviderSettings{
