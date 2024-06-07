@@ -22,7 +22,7 @@ end
 # This cache is only necessary because Datadog is building
 # the agent over and over again in a highly distributed environment.
 if ENV["S3_OMNIBUS_CACHE_BUCKET"]
-  use_s3_caching true
+  use_s3_caching false
   s3_bucket ENV["S3_OMNIBUS_CACHE_BUCKET"]
   s3_endpoint "https://s3.amazonaws.com"
   s3_region 'us-east-1'
