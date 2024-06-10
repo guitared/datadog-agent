@@ -60,7 +60,7 @@ func (v *configRefreshSuite) TestConfigRefresh() {
 	rootDir := "/tmp/" + v.T().Name()
 	v.Env().RemoteHost.MkdirAll(rootDir)
 
-	authTokenFilePath := "/etc/datadog-agent/auth_token"
+	authTokenFilePath := "/opt/datadog-agent/run/auth_token"
 	secretResolverPath := filepath.Join(rootDir, "secret-resolver.py")
 
 	v.T().Log("Setting up the secret resolver and the initial api key file")
