@@ -15,7 +15,6 @@ package tagger
 
 import (
 	"context"
-
 	"github.com/DataDog/datadog-agent/comp/core/tagger/types"
 	taggertypes "github.com/DataDog/datadog-agent/pkg/tagger/types"
 	"github.com/DataDog/datadog-agent/pkg/tagset"
@@ -25,7 +24,7 @@ import (
 
 // Component is the component type.
 type Component interface {
-	Start(ctx context.Context) error
+	Start(ctx context.Context, config taggertypes.DatadogConfig) error
 	Stop() error
 	Tag(entity string, cardinality types.TagCardinality) ([]string, error)
 	AccumulateTagsFor(entity string, cardinality types.TagCardinality, tb tagset.TagsAccumulator) error

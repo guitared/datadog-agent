@@ -10,6 +10,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/DataDog/datadog-agent/pkg/api/security"
+	"github.com/DataDog/datadog-agent/pkg/config"
 	"net"
 	"strings"
 	"time"
@@ -25,9 +27,8 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/tagger/taggerimpl/empty"
 	"github.com/DataDog/datadog-agent/comp/core/tagger/taggerimpl/telemetry"
 	"github.com/DataDog/datadog-agent/comp/core/tagger/types"
-	"github.com/DataDog/datadog-agent/pkg/api/security"
-	"github.com/DataDog/datadog-agent/pkg/config"
 	pb "github.com/DataDog/datadog-agent/pkg/proto/pbgo/core"
+	taggertypes "github.com/DataDog/datadog-agent/pkg/tagger/types"
 	"github.com/DataDog/datadog-agent/pkg/tagset"
 	"github.com/DataDog/datadog-agent/pkg/util/clusteragent"
 	grpcutil "github.com/DataDog/datadog-agent/pkg/util/grpc"
@@ -118,7 +119,7 @@ func NewTagger(options Options) *Tagger {
 
 // Start creates the connection to the remote tagger and starts watching for
 // events.
-func (t *Tagger) Start(ctx context.Context) error {
+func (t *Tagger) Start(ctx context.Context, config taggertypes.DatadogConfig) error {
 	t.telemetryTicker = time.NewTicker(1 * time.Minute)
 
 	t.ctx, t.cancel = context.WithCancel(ctx)
@@ -147,7 +148,7 @@ func (t *Tagger) Start(ctx context.Context) error {
 
 	t.client = pb.NewAgentSecureClient(t.conn)
 
-	timeout := time.Duration(config.Datadog().GetInt("remote_tagger_timeout_seconds")) * time.Second
+	timeout := time.Duration(config.RemoteTaggerTimeoutSeconds) * time.Second
 	err = t.startTaggerStream(timeout)
 	if err != nil {
 		// tagger stopped before being connected

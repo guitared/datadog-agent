@@ -19,6 +19,19 @@ const (
 	ProductOriginAPM ProductOrigin = iota
 )
 
+// DatadogConfig contains the configuration of the Datadog Agent needed for the Tagger.
+type DatadogConfig struct {
+	DogstatsdEntityIDPrecedenceEnabled bool
+	DogstatsdOptOutEnabled             bool
+	OriginDetectionUnifiedEnabled      bool
+	CollectEC2ResourceTags             bool
+	RemoteTaggerTimeoutSeconds         int
+	LabelsAsTags                       map[string]string
+	AnnotationsAsTags                  map[string]string
+	NsLabelsAsTags                     map[string]string
+	NsAnnotationsAsTags                map[string]string
+}
+
 // OriginInfo contains the Origin Detection information.
 type OriginInfo struct {
 	FromUDS       string        // FromUDS is the origin resolved using Unix Domain Socket.

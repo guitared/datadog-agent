@@ -17,6 +17,7 @@ import (
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/status/health"
+	taggertypes "github.com/DataDog/datadog-agent/pkg/tagger/types"
 	"github.com/DataDog/datadog-agent/pkg/util"
 	"github.com/DataDog/datadog-agent/pkg/util/flavor"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/clustername"
@@ -157,12 +158,12 @@ func (c *WorkloadMetaCollector) stream(ctx context.Context) {
 }
 
 // NewWorkloadMetaCollector returns a new WorkloadMetaCollector.
-func NewWorkloadMetaCollector(_ context.Context, store workloadmeta.Component, p processor) *WorkloadMetaCollector {
+func NewWorkloadMetaCollector(_ context.Context, store workloadmeta.Component, p processor, config taggertypes.DatadogConfig) *WorkloadMetaCollector {
 	c := &WorkloadMetaCollector{
 		tagProcessor:           p,
 		store:                  store,
 		children:               make(map[string]map[string]struct{}),
-		collectEC2ResourceTags: config.Datadog().GetBool("ecs_collect_resource_tags_ec2"),
+		collectEC2ResourceTags: config.CollectEC2ResourceTags,
 	}
 
 	containerLabelsAsTags := mergeMaps(
@@ -176,11 +177,7 @@ func NewWorkloadMetaCollector(_ context.Context, store workloadmeta.Component, p
 	)
 	c.initContainerMetaAsTags(containerLabelsAsTags, containerEnvAsTags)
 
-	labelsAsTags := config.Datadog().GetStringMapString("kubernetes_pod_labels_as_tags")
-	annotationsAsTags := config.Datadog().GetStringMapString("kubernetes_pod_annotations_as_tags")
-	nsLabelsAsTags := config.Datadog().GetStringMapString("kubernetes_namespace_labels_as_tags")
-	nsAnnotationsAsTags := config.Datadog().GetStringMapString("kubernetes_namespace_annotations_as_tags")
-	c.initPodMetaAsTags(labelsAsTags, annotationsAsTags, nsLabelsAsTags, nsAnnotationsAsTags)
+	c.initPodMetaAsTags(config.LabelsAsTags, config.AnnotationsAsTags, config.NsLabelsAsTags, config.NsAnnotationsAsTags)
 
 	return c
 }

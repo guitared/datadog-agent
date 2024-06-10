@@ -33,7 +33,7 @@ func TestTagBuilder(t *testing.T) {
 		workloadmetafxmock.MockModuleV2(),
 	))
 	tagger := NewTagger(store)
-	tagger.Start(context.Background())
+	tagger.Start(context.Background(), config)
 	defer tagger.Stop()
 
 	tagger.tagStore.ProcessTagInfo([]*types.TagInfo{

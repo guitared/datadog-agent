@@ -69,12 +69,6 @@ func Module() fxutil.Module {
 		))
 }
 
-type datadogConfig struct {
-	dogstatsdEntityIDPrecedenceEnabled bool
-	dogstatsdOptOutEnabled             bool
-	originDetectionUnifiedEnabled      bool
-}
-
 // TaggerClient is a component that contains two tagger component: capturetagger and defaulttagger
 //
 // nolint:revive // TODO(containers) Fix revive linter
@@ -89,7 +83,7 @@ type TaggerClient struct {
 	defaultTagger taggerComp.Component
 
 	wmeta         workloadmeta.Component
-	datadogConfig datadogConfig
+	datadogConfig taggertypes.DatadogConfig
 
 	checksCardinality    types.TagCardinality
 	dogstatsdCardinality types.TagCardinality
@@ -153,9 +147,16 @@ func newTaggerClient(deps dependencies) provides {
 		taggerClient.wmeta = deps.Wmeta
 	}
 
-	taggerClient.datadogConfig.dogstatsdEntityIDPrecedenceEnabled = deps.Config.GetBool("dogstatsd_entity_id_precedence")
-	taggerClient.datadogConfig.originDetectionUnifiedEnabled = deps.Config.GetBool("origin_detection_unified")
-	taggerClient.datadogConfig.dogstatsdOptOutEnabled = deps.Config.GetBool("dogstatsd_origin_optout_enabled")
+	// Getting configuration for the tagger
+	taggerClient.datadogConfig.DogstatsdEntityIDPrecedenceEnabled = deps.Config.GetBool("dogstatsd_entity_id_precedence")
+	taggerClient.datadogConfig.OriginDetectionUnifiedEnabled = deps.Config.GetBool("origin_detection_unified")
+	taggerClient.datadogConfig.DogstatsdOptOutEnabled = deps.Config.GetBool("dogstatsd_origin_optout_enabled")
+	taggerClient.datadogConfig.CollectEC2ResourceTags = deps.Config.GetBool("ecs_collect_resource_tags_ec2")
+	taggerClient.datadogConfig.RemoteTaggerTimeoutSeconds = deps.Config.GetInt("remote_tagger_timeout_seconds")
+	taggerClient.datadogConfig.LabelsAsTags = deps.Config.GetStringMapString("kubernetes_pod_labels_as_tags")
+	taggerClient.datadogConfig.AnnotationsAsTags = deps.Config.GetStringMapString("kubernetes_pod_annotations_as_tags")
+	taggerClient.datadogConfig.NsLabelsAsTags = deps.Config.GetStringMapString("kubernetes_namespace_labels_as_tags")
+	taggerClient.datadogConfig.NsAnnotationsAsTags = deps.Config.GetStringMapString("kubernetes_namespace_annotations_as_tags")
 
 	deps.Log.Info("TaggerClient is created, defaultTagger type: ", reflect.TypeOf(taggerClient.defaultTagger))
 	taggerComp.SetGlobalTaggerClient(taggerClient)
@@ -176,12 +177,12 @@ func newTaggerClient(deps dependencies) provides {
 		}
 		// Main context passed to components, consistent with the one used in the workloadmeta component
 		mainCtx, _ := common.GetMainCtxCancel()
-		err = taggerClient.Start(mainCtx)
+		err = taggerClient.Start(mainCtx, taggerClient.datadogConfig)
 		if err != nil && deps.Params.FallBackToLocalIfRemoteTaggerFails {
 			deps.Log.Warnf("Starting remote tagger failed. Falling back to local tagger: %s", err)
 			taggerClient.defaultTagger = local.NewTagger(deps.Wmeta)
 			// Retry to start the local tagger
-			return taggerClient.Start(mainCtx)
+			return taggerClient.Start(mainCtx, taggerClient.datadogConfig)
 		}
 		return err
 	}})
@@ -206,8 +207,8 @@ func (t *TaggerClient) writeList(w http.ResponseWriter, _ *http.Request) {
 }
 
 // Start calls defaultTagger.Start
-func (t *TaggerClient) Start(ctx context.Context) error {
-	return t.defaultTagger.Start(ctx)
+func (t *TaggerClient) Start(ctx context.Context, config taggertypes.DatadogConfig) error {
+	return t.defaultTagger.Start(ctx, config)
 }
 
 // Stop calls defaultTagger.Stop
@@ -372,7 +373,7 @@ func (t *TaggerClient) EnrichTags(tb tagset.TagsAccumulator, originInfo taggerty
 	productOrigin := originInfo.ProductOrigin
 	// If origin_detection_unified is disabled, we use DogStatsD's Legacy Origin Detection.
 	// TODO: remove this when origin_detection_unified is enabled by default
-	if !t.datadogConfig.originDetectionUnifiedEnabled && productOrigin == taggertypes.ProductOriginDogStatsD {
+	if !t.datadogConfig.OriginDetectionUnifiedEnabled && productOrigin == taggertypes.ProductOriginDogStatsD {
 		productOrigin = taggertypes.ProductOriginDogStatsDLegacy
 	}
 
@@ -403,7 +404,7 @@ func (t *TaggerClient) EnrichTags(tb tagset.TagsAccumulator, originInfo taggerty
 		// | none                   | empty           || empty                               |
 		// | empty                  | not empty       || container prefix + originFromMsg    |
 		// | none                   | not empty       || container prefix + originFromMsg    |
-		if t.datadogConfig.dogstatsdOptOutEnabled && originInfo.Cardinality == "none" {
+		if t.datadogConfig.DogstatsdOptOutEnabled && originInfo.Cardinality == "none" {
 			originInfo.FromUDS = packets.NoOrigin
 			originInfo.FromTag = ""
 			originInfo.FromMsg = ""
@@ -413,7 +414,7 @@ func (t *TaggerClient) EnrichTags(tb tagset.TagsAccumulator, originInfo taggerty
 		// We use the UDS socket origin if no origin ID was specify in the tags
 		// or 'dogstatsd_entity_id_precedence' is set to False (default false).
 		if originInfo.FromUDS != packets.NoOrigin &&
-			(originInfo.FromTag == "" || !t.datadogConfig.dogstatsdEntityIDPrecedenceEnabled) {
+			(originInfo.FromTag == "" || !t.datadogConfig.DogstatsdEntityIDPrecedenceEnabled) {
 			if err := t.AccumulateTagsFor(originInfo.FromUDS, cardinality, tb); err != nil {
 				log.Errorf(err.Error())
 			}

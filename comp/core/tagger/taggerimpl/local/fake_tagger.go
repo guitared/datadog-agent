@@ -7,6 +7,7 @@ package local
 
 import (
 	"context"
+	"github.com/DataDog/datadog-agent/comp/core/config"
 	"strconv"
 	"sync"
 
@@ -71,7 +72,7 @@ func (f *FakeTagger) SetError(entity string, cardinality types.TagCardinality, e
 // Tagger interface
 
 // Start not implemented in fake tagger
-func (f *FakeTagger) Start(_ context.Context) error {
+func (f *FakeTagger) Start(_ context.Context, config config.Component) error {
 	return nil
 }
 

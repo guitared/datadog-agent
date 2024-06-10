@@ -9,6 +9,7 @@ package local
 import (
 	"context"
 	"fmt"
+	configComp "github.com/DataDog/datadog-agent/comp/core/config"
 	"sync"
 
 	"github.com/DataDog/datadog-agent/comp/core/tagger/taggerimpl/collectors"
@@ -46,7 +47,7 @@ func NewTagger(workloadStore workloadmeta.Component) *Tagger {
 }
 
 // Start starts the workloadmeta collector and then it is ready for requests.
-func (t *Tagger) Start(ctx context.Context) error {
+func (t *Tagger) Start(ctx context.Context, config configComp.Component) error {
 	t.ctx, t.cancel = context.WithCancel(ctx)
 
 	t.collector = collectors.NewWorkloadMetaCollector(

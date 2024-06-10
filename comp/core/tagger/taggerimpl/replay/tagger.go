@@ -8,6 +8,7 @@ package replay
 
 import (
 	"context"
+	"github.com/DataDog/datadog-agent/comp/core/config"
 	"time"
 
 	"github.com/DataDog/datadog-agent/comp/core/tagger/proto"
@@ -41,7 +42,7 @@ func NewTagger() *Tagger {
 
 // Start starts the connection to the replay tagger and starts watching for
 // events.
-func (t *Tagger) Start(ctx context.Context) error {
+func (t *Tagger) Start(ctx context.Context, config config.Component) error {
 	t.telemetryTicker = time.NewTicker(1 * time.Minute)
 
 	t.ctx, t.cancel = context.WithCancel(ctx)
