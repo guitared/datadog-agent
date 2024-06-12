@@ -93,7 +93,7 @@ func mutatingWebhooks(wmeta workloadmeta.Component, pa workload.PodPatcher) []Mu
 		autoscaling.NewWebhook(pa),
 	}
 
-	apm, err := autoinstrumentation.GetWebhook(wmeta)
+	apm, err := autoinstrumentation.NewWebhook(wmeta)
 	if err == nil {
 		webhooks = append(webhooks, apm)
 	} else {

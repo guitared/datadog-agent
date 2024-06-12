@@ -172,7 +172,7 @@ func (w *Webhook) inject(pod *corev1.Pod, _ string, _ dynamic.Interface) (bool, 
 
 	}
 
-	if !autoinstrumentation.ShouldInject(pod, w.wmeta) {
+	if !autoinstrumentation.ShouldInject(pod) {
 		return false, nil
 	}
 

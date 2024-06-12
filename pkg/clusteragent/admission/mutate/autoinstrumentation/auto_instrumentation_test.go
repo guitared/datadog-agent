@@ -244,7 +244,7 @@ func TestInjectAutoInstruConfig(t *testing.T) {
 	wmeta := fxutil.Test[workloadmeta.Component](t, core.MockBundle(), workloadmetafxmock.MockModule(), fx.Supply(workloadmeta.NewParams()))
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			webhook, err := GetWebhook(wmeta)
+			webhook, err := NewWebhook(wmeta)
 			require.NoError(t, err)
 
 			err = webhook.injectAutoInstruConfig(tt.pod, tt.libsToInject, false, "")
@@ -700,7 +700,8 @@ func TestExtractLibInfo(t *testing.T) {
 
 			// Need to create a new instance of the webhook to take into account
 			// the config changes.
-			apmInstrumentationWebhook, errInitAPMInstrumentation = NewWebhook(wmeta)
+			UnsetAutoInstrumentationInjectionFilter()
+			apmInstrumentationWebhook, errInitAPMInstrumentation := NewWebhook(wmeta)
 			require.NoError(t, errInitAPMInstrumentation)
 
 			podIsEligibile := apmInstrumentationWebhook.isPodEligible(tt.pod)
@@ -2098,7 +2099,8 @@ func TestInjectAutoInstrumentation(t *testing.T) {
 
 			// Need to create a new instance of the webhook to take into account
 			// the config changes.
-			apmInstrumentationWebhook, errInitAPMInstrumentation = NewWebhook(wmeta)
+			UnsetAutoInstrumentationInjectionFilter()
+			apmInstrumentationWebhook, errInitAPMInstrumentation := NewWebhook(wmeta)
 			require.NoError(t, errInitAPMInstrumentation)
 
 			_, err := apmInstrumentationWebhook.inject(tt.pod, "", fake.NewSimpleDynamicClient(scheme.Scheme))
@@ -2340,10 +2342,11 @@ func TestShouldInject(t *testing.T) {
 
 			// Need to create a new instance of the webhook to take into account
 			// the config changes.
-			apmInstrumentationWebhook, errInitAPMInstrumentation = NewWebhook(wmeta)
+			UnsetAutoInstrumentationInjectionFilter()
+			_, errInitAPMInstrumentation := NewWebhook(wmeta)
 			require.NoError(t, errInitAPMInstrumentation)
 
-			if got := ShouldInject(tt.pod, wmeta); got != tt.want {
+			if got := ShouldInject(tt.pod); got != tt.want {
 				t.Errorf("shouldInject() = %v, want %v", got, tt.want)
 			}
 		})

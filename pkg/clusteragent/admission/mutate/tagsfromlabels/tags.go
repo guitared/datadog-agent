@@ -139,7 +139,7 @@ func (w *Webhook) injectTags(pod *corev1.Pod, ns string, dc dynamic.Interface) (
 		return false, errors.New(metrics.InvalidInput)
 	}
 
-	if !autoinstrumentation.ShouldInject(pod, w.wmeta) {
+	if !autoinstrumentation.ShouldInject(pod) {
 		// Ignore pod if it has the label admission.datadoghq.com/enabled=false or Single step configuration is disabled
 		return false, nil
 	}
