@@ -220,6 +220,10 @@ func (w *Webhook) inject(pod *corev1.Pod, _ string, _ dynamic.Interface) (bool, 
 
 	injectApmTelemetryConfig(pod)
 
+	if !w.isPodEligible(pod) {
+		return false, nil
+	}
+
 	// 1. we check to see if we've already done injection,
 	//    if so, we abort.
 	for _, lang := range supportedLanguages {
