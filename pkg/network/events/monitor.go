@@ -76,6 +76,7 @@ type ProcessEventHandler interface {
 	HandleProcessEvent(*Process)
 }
 
+// PacketEventHandler interface handle packets via event
 type PacketEventHandler interface {
 	HandlePacket(ev *model.Event)
 }
@@ -86,7 +87,7 @@ func RegisterHandler(handler ProcessEventHandler) {
 	m.RegisterHandler(handler)
 }
 
-// RegisterHandler registers a handler function for getting process events
+// RegisterPacketHandler registers a handler function for getting process events
 func RegisterPacketHandler(handler PacketEventHandler) {
 	m := theMonitor.Load().(*eventMonitor)
 	m.RegisterPacketHandler(handler)
