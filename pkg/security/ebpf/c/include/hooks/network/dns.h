@@ -65,6 +65,8 @@ __attribute__((always_inline)) int handle_raw_packet(struct __sk_buff *skb, stru
         return ACT_OK;
     }
 
+    bpf_skb_pull_data(skb, 0);
+
     asm ("r1 = *(u32 *)(%[skb] + %[len_offset])\n\t"
          "if r1 <= 0 goto +1\n\t"
          "if r1 < %[limit] goto +2\n\t"
