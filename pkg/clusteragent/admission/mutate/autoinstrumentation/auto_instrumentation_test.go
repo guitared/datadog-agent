@@ -507,6 +507,46 @@ func TestExtractLibInfo(t *testing.T) {
 			},
 		},
 		{
+			name: "all with mutate_unlabelled off, but labelled admission enabled",
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"admission.datadoghq.com/all-lib.version": "latest",
+					},
+					Labels: map[string]string{
+						"admission.datadoghq.com/enabled": "true",
+					},
+				},
+			},
+			containerRegistry:   "registry",
+			expectedPodEligible: 1,
+			expectedLibsToInject: []libInfo{ // TODO: Add new entry when a new language is supported
+				{
+					lang:  "java",
+					image: "registry/dd-lib-java-init:latest",
+				},
+				{
+					lang:  "js",
+					image: "registry/dd-lib-js-init:latest",
+				},
+				{
+					lang:  "python",
+					image: "registry/dd-lib-python-init:latest",
+				},
+				{
+					lang:  "dotnet",
+					image: "registry/dd-lib-dotnet-init:latest",
+				},
+				{
+					lang:  "ruby",
+					image: "registry/dd-lib-ruby-init:latest",
+				},
+			},
+			setupConfig: func() {
+				mockConfig.SetWithoutSource("admission_controller.mutate_unlabelled", false)
+			},
+		},
+		{
 			name: "java + all",
 			pod: &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
