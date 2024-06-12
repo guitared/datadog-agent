@@ -80,28 +80,35 @@ type packetSource interface {
 	Close()
 }
 
+// RawPacketSource packet source from a event chan
 type RawPacketSource struct {
 	ch chan *model.Event
 }
 
+// PacketType return the 1st layer type of the packets
 func (rp *RawPacketSource) PacketType() gopacket.LayerType {
 	return layers.LayerTypeEthernet
 }
 
+// VisitPackets call the callback for each packets from the chan
 func (rp *RawPacketSource) VisitPackets(cancel <-chan struct{}, visitor func(data []byte, timestamp time.Time) error) error {
 	for {
 		select {
 		case ev := <-rp.ch:
-			//	fmt.Printf("EBPF PACKET\n")
-			visitor(ev.RawPacket.Data, time.Now())
+			if err := visitor(ev.RawPacket.Data, time.Now()); err != nil {
+				return err
+			}
+		case <-cancel:
+			return nil
 		default:
 			return nil
 		}
 	}
 }
 
+// Close the packets source
 func (rp *RawPacketSource) Close() {
-
+	close(rp.ch)
 }
 
 // newSocketFilterSnooper returns a new socketFilterSnooper
@@ -213,17 +220,14 @@ func (s *socketFilterSnooper) processPacket(data []byte, ts time.Time) error {
 
 func (s *socketFilterSnooper) pollPackets() {
 	for {
-		err := s.source.VisitPackets(s.exit, s.processPacket)
-
-		if err != nil {
-			log.Warnf("error reading packet: %s", err)
-		}
-
 		// Properly synchronizes termination process
 		select {
 		case <-s.exit:
 			return
 		default:
+			if err := s.source.VisitPackets(s.exit, s.processPacket); err != nil {
+				log.Warnf("error reading packet: %s", err)
+			}
 		}
 
 		// Sleep briefly and try again

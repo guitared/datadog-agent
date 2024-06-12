@@ -238,9 +238,10 @@ func newTracer(cfg *config.Config, telemetryComponent telemetryComponent.Compone
 	return tr, nil
 }
 
-func (tr *Tracer) HandlePacket(ev *model.Event) {
+// HandlePacket from event
+func (t *Tracer) HandlePacket(ev *model.Event) {
 	select {
-	case tr.rawPacketChan <- ev:
+	case t.rawPacketChan <- ev:
 	default:
 	}
 }
