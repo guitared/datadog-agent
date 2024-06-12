@@ -8,7 +8,6 @@ package converter
 
 import (
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/otelcol"
 )
 
 // team: opentelemetry
@@ -16,7 +15,7 @@ import (
 // Component implements the confmap.Converter interface and
 // provides extra functions to expose the provided and enhanced configs.
 type Component interface {
-	otelcol.ConfigProvider
+	confmap.Converter
 	GetProvidedConf() *confmap.Conf
 	GetEnhancedConf() *confmap.Conf
 	GetProvidedConfAsString() (string, error)
