@@ -700,7 +700,7 @@ func TestExtractLibInfo(t *testing.T) {
 
 			// Need to create a new instance of the webhook to take into account
 			// the config changes.
-			UnsetAutoInstrumentationInjectionFilter()
+			UnsetInjectionFilter()
 			apmInstrumentationWebhook, errInitAPMInstrumentation := NewWebhook(wmeta)
 			require.NoError(t, errInitAPMInstrumentation)
 
@@ -2099,7 +2099,7 @@ func TestInjectAutoInstrumentation(t *testing.T) {
 
 			// Need to create a new instance of the webhook to take into account
 			// the config changes.
-			UnsetAutoInstrumentationInjectionFilter()
+			UnsetInjectionFilter()
 			apmInstrumentationWebhook, errInitAPMInstrumentation := NewWebhook(wmeta)
 			require.NoError(t, errInitAPMInstrumentation)
 
@@ -2342,11 +2342,11 @@ func TestShouldInject(t *testing.T) {
 
 			// Need to create a new instance of the webhook to take into account
 			// the config changes.
-			UnsetAutoInstrumentationInjectionFilter()
-			_, errInitAPMInstrumentation := NewWebhook(wmeta)
+			UnsetInjectionFilter()
+			webhook, errInitAPMInstrumentation := NewWebhook(wmeta)
 			require.NoError(t, errInitAPMInstrumentation)
 
-			if got := ShouldInject(tt.pod); got != tt.want {
+			if got := webhook.isPodEligible(tt.pod); got != tt.want {
 				t.Errorf("shouldInject() = %v, want %v", got, tt.want)
 			}
 		})

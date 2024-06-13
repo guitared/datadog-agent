@@ -199,8 +199,8 @@ func ShouldMutatePod(pod *corev1.Pod, checks ...func() bool) (bool, bool) {
 }
 
 // ContainerRegistry gets the container registry config using the specified
-// config option, and falls back to the default container registry if no webhook-
-// specific container registry is set.
+// config option, and falls back to the default container registry if no
+// webhook-specific container registry is set.
 func ContainerRegistry(specificConfigOpt string) string {
 	if config.Datadog().IsSet(specificConfigOpt) {
 		return config.Datadog().GetString(specificConfigOpt)

@@ -29,26 +29,41 @@ var (
 	// They first check if the pod has the label to enable mutations.
 	// If it doesn't, they mutate the pod if the option to "mutate_unlabeled" is
 	// set to true or if APM SSI is enabled in the namespace.
-	autoInstrumentationInjectionFilterInit sync.Once
-	autoInstrumentationFilter              *containers.Filter
-	autoInstrumentationFilterError         error
+	autoInstrumentationFilter = &injectionFilter{}
 )
 
-// ShouldInject returns true if Admission Controller should inject standard tags, APM configs and APM libraries
-func ShouldInject(pod *corev1.Pod) bool {
+var _ mutatecommon.InjectionFilter = &injectionFilter{}
+
+type injectionFilter struct {
+	once   sync.Once
+	filter *containers.Filter
+	err    error
+}
+
+// ShouldInjectPod returns true if we can do any kind of injection
+// on this pod.
+//
+// Either because of explicit labels, auto instrumentation configuration,
+// or other config flags (mutate_unlabelled).
+func (f *injectionFilter) ShouldInjectPod(pod *corev1.Pod) bool {
 	shouldMutate, _ := mutatecommon.ShouldMutatePod(
 		pod,
-		func() bool { return IsEnabledInNamespace(pod.Namespace) },
+		func() bool { return f.IsNamespaceEligible(pod.Namespace) },
 		mutatecommon.ShouldMutateUnlabelledPods,
 	)
+
 	return shouldMutate
 }
 
-// IsEnabledInNamespace is a global check to see if APM instrumentation
-// is enabled in a namespace given provided configuration.
+// IsNamespaceEligible returns true of APM Single Step Instrumentation
+// is enabled and enabled for this namespace.
 //
-// If instrumentation itself is disabled, we return false.
-func IsEnabledInNamespace(namespace string) bool {
+// There could be an error in configuration which would imply that
+// APM is disabled.
+//
+// This DOES NOT respect `mutate_unlabelled` since it is a namespace
+// specific check.
+func (f *injectionFilter) IsNamespaceEligible(ns string) bool {
 	apmInstrumentationEnabled := config.Datadog().GetBool("apm_config.instrumentation.enabled")
 
 	if !apmInstrumentationEnabled {
@@ -56,12 +71,22 @@ func IsEnabledInNamespace(namespace string) bool {
 		return false
 	}
 
-	filter, err := apmSSINamespaceFilter()
+	filter, err := f.get()
 	if err != nil {
 		return false
 	}
 
-	return !filter.IsExcluded(nil, "", "", namespace)
+	return !filter.IsExcluded(nil, "", "", ns)
+}
+
+func (f *injectionFilter) get() (*containers.Filter, error) {
+	f.once.Do(func() {
+		if f.filter == nil {
+			f.filter, f.err = makeAPMSSINamespaceFilter()
+		}
+	})
+
+	return f.filter, f.err
 }
 
 // makeAPMSSINamespaceFilter returns the filter used by APM SSI to filter namespaces.
@@ -116,25 +141,13 @@ func makeAPMSSINamespaceFilter() (*containers.Filter, error) {
 	return containers.NewFilter(containers.GlobalFilter, apmEnabledNamespacesWithPrefix, filterExcludeList)
 }
 
-// apmSSINamespaceFilter is a memoized version of makeAPMSSINamespaceFilter
-//
-// This function call is expensive, and it is used by different components,
-// so we have it set as something we can use in different places except
-// for the auto_instrumentation webhook (where it was originally).
-func apmSSINamespaceFilter() (*containers.Filter, error) {
-	autoInstrumentationInjectionFilterInit.Do(func() {
-		if autoInstrumentationFilter == nil {
-			autoInstrumentationFilter, autoInstrumentationFilterError = makeAPMSSINamespaceFilter()
-		}
-	})
-
-	return autoInstrumentationFilter, autoInstrumentationFilterError
+// UnsetInjectionFilter unsets the singleton autoInstrumentationFilter.
+// Used for testing.
+func UnsetInjectionFilter() {
+	autoInstrumentationFilter = &injectionFilter{}
 }
 
-// UnsetAutoInstrumentationInjectionFilter unsets the singleton autoInstrumentationFilter.
-// Used for testing.
-func UnsetAutoInstrumentationInjectionFilter() {
-	autoInstrumentationInjectionFilterInit = sync.Once{}
-	autoInstrumentationFilter = nil
-	autoInstrumentationFilterError = nil
+// GetInjectionFilter is an accessor for the autoInstrumentationFilter
+func GetInjectionFilter() mutatecommon.InjectionFilter {
+	return autoInstrumentationFilter
 }

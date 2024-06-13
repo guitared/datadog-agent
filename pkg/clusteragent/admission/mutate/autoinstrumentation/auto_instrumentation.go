@@ -129,6 +129,7 @@ type Webhook struct {
 	resources         []string
 	operations        []admiv1.OperationType
 	containerRegistry string
+	injectionFilter   mutatecommon.InjectionFilter
 	pinnedLibraries   []libInfo
 	wmeta             workloadmeta.Component
 }
@@ -137,8 +138,8 @@ type Webhook struct {
 func NewWebhook(wmeta workloadmeta.Component) (*Webhook, error) {
 	// Note: the webhook is not functional with the filter being disabled--
 	//       and the filter is _global_! so we need to make sure that it was
-	//       initialized.
-	_, err := apmSSINamespaceFilter()
+	//       initialized as it validates the configuration itself.
+	_, err := autoInstrumentationFilter.get()
 	if err != nil {
 		return nil, err
 	}
@@ -151,6 +152,7 @@ func NewWebhook(wmeta workloadmeta.Component) (*Webhook, error) {
 		resources:         []string{"pods"},
 		operations:        []admiv1.OperationType{admiv1.Create},
 		containerRegistry: containerRegistry,
+		injectionFilter:   autoInstrumentationFilter,
 		pinnedLibraries:   getPinnedLibraries(containerRegistry),
 		wmeta:             wmeta,
 	}, nil
@@ -209,13 +211,11 @@ func libImageName(registry string, lang language, tag string) string {
 }
 
 func (w *Webhook) isPodEligible(pod *corev1.Pod) bool {
-	return ShouldInject(pod)
+	return w.injectionFilter.ShouldInjectPod(pod)
 }
 
-// isEnabledInNamespace indicates if Single Step Instrumentation is enabled for
-// the namespace in the cluster
 func (w *Webhook) isEnabledInNamespace(namespace string) bool {
-	return IsEnabledInNamespace(namespace)
+	return w.injectionFilter.IsNamespaceEligible(namespace)
 }
 
 func (w *Webhook) inject(pod *corev1.Pod, _ string, _ dynamic.Interface) (bool, error) {
