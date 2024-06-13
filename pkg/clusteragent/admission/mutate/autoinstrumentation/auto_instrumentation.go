@@ -30,7 +30,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/metrics"
 	mutatecommon "github.com/DataDog/datadog-agent/pkg/clusteragent/admission/mutate/common"
 	"github.com/DataDog/datadog-agent/pkg/config"
-	"github.com/DataDog/datadog-agent/pkg/util/containers"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/DataDog/datadog-agent/pkg/util/pointer"
@@ -129,7 +128,6 @@ type Webhook struct {
 	endpoint          string
 	resources         []string
 	operations        []admiv1.OperationType
-	filter            *containers.Filter
 	containerRegistry string
 	pinnedLibraries   []libInfo
 	wmeta             workloadmeta.Component
@@ -137,20 +135,21 @@ type Webhook struct {
 
 // NewWebhook returns a new Webhook dependent on the namespace filter.
 func NewWebhook(wmeta workloadmeta.Component) (*Webhook, error) {
-	filter, err := apmSSINamespaceFilter()
+	// Note: the webhook is not functional with the filter being disabled--
+	//       and the filter is _global_! so we need to make sure that it was
+	//       initialized.
+	_, err := apmSSINamespaceFilter()
 	if err != nil {
 		return nil, err
 	}
 
 	containerRegistry := mutatecommon.ContainerRegistry("admission_controller.auto_instrumentation.container_registry")
-
 	return &Webhook{
 		name:              webhookName,
 		isEnabled:         config.Datadog().GetBool("admission_controller.auto_instrumentation.enabled"),
 		endpoint:          config.Datadog().GetString("admission_controller.auto_instrumentation.endpoint"),
 		resources:         []string{"pods"},
 		operations:        []admiv1.OperationType{admiv1.Create},
-		filter:            filter,
 		containerRegistry: containerRegistry,
 		pinnedLibraries:   getPinnedLibraries(containerRegistry),
 		wmeta:             wmeta,
@@ -211,6 +210,12 @@ func libImageName(registry string, lang language, tag string) string {
 
 func (w *Webhook) isPodEligible(pod *corev1.Pod) bool {
 	return ShouldInject(pod)
+}
+
+// isEnabledInNamespace indicates if Single Step Instrumentation is enabled for
+// the namespace in the cluster
+func (w *Webhook) isEnabledInNamespace(namespace string) bool {
+	return IsEnabledInNamespace(namespace)
 }
 
 func (w *Webhook) inject(pod *corev1.Pod, _ string, _ dynamic.Interface) (bool, error) {
@@ -466,12 +471,6 @@ func (w *Webhook) extractLibrariesFromAnnotations(pod *corev1.Pod) []libInfo {
 	}
 
 	return libList
-}
-
-// isEnabledInNamespace indicates if Single Step Instrumentation is enabled for
-// the namespace in the cluster
-func (w *Webhook) isEnabledInNamespace(namespace string) bool {
-	return IsEnabledInNamespace(namespace)
 }
 
 func (w *Webhook) injectAutoInstruConfig(pod *corev1.Pod, libsToInject []libInfo, autoDetected bool, injectionType string) error {

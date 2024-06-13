@@ -163,13 +163,20 @@ func containsVolumeMount(volumeMounts []corev1.VolumeMount, element corev1.Volum
 	}
 	return false
 }
+
+// ShouldMutateUnlabelledPods returns true if we should mutate unlabelled pods.
+func ShouldMutateUnlabelledPods() bool {
+	return config.Datadog().GetBool("admission_controller.mutate_unlabelled")
+}
+
 // ShouldMutatePod returns true if Admission Controller is allowed to mutate the pod
-// via pod label or mutateUnlabelled configuration.
+// via pod label or fallback checks.
 //
 // It also returns a second flag to describe whether this decision was
-// explicit or not.
-func ShouldMutatePod(pod *corev1.Pod) (bool, bool) {
-	// If a pod explicitly sets the label admission.datadoghq.com/enabled, make a decision based on its value
+// explicit or not so the caller can decide to override implicit behavior.
+func ShouldMutatePod(pod *corev1.Pod, checks ...func() bool) (bool, bool) {
+	// If a pod explicitly sets the label admission.datadoghq.com/enabled,
+	// make a decision based on its value.
 	if val, found := pod.GetLabels()[admCommon.EnabledLabelKey]; found {
 		switch val {
 		case "true":
@@ -181,7 +188,14 @@ func ShouldMutatePod(pod *corev1.Pod) (bool, bool) {
 		}
 	}
 
-	return config.Datadog().GetBool("admission_controller.mutate_unlabelled"), false
+	for _, check := range checks {
+		if check() {
+			return true, false
+		}
+	}
+
+	return false, false
+	// return ShouldMutateUnlabelledPods(), false
 }
 
 // ContainerRegistry gets the container registry config using the specified

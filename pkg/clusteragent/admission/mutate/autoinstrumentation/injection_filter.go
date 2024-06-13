@@ -14,10 +14,13 @@ import (
 
 var (
 	// We need a global variable to store the filter instance
-	// because other webhooks depend on it. The "config" and the "tags" webhooks
-	// depend on the "auto_instrumentation" webhook to decide if a pod should be
-	// injected. They first check if the pod has the label to enable mutations.
-	// If it doesn't, they mutate the pod if the option to mutate unlabeled is
+	// because other webhooks depend on it.
+	//
+	// The "config" and the "tags" webhooks depend on the "auto_instrumentation"
+	// configuration to decide if a pod should be injected.
+	//
+	// They first check if the pod has the label to enable mutations.
+	// If it doesn't, they mutate the pod if the option to "mutate_unlabeled" is
 	// set to true or if APM SSI is enabled in the namespace.
 	autoInstrumentationInjectionFilterInit sync.Once
 	autoInstrumentationFilter              *containers.Filter
@@ -26,13 +29,11 @@ var (
 
 // ShouldInject returns true if Admission Controller should inject standard tags, APM configs and APM libraries
 func ShouldInject(pod *corev1.Pod) bool {
-	shouldMutate, explicit := mutatecommon.ShouldMutatePod(pod)
-	if explicit {
-		return shouldMutate
-	}
-	if IsEnabledInNamespace(pod.Namespace) {
-		return true
-	}
+	shouldMutate, _ := mutatecommon.ShouldMutatePod(
+		pod,
+		func() bool { return IsEnabledInNamespace(pod.Namespace) },
+		mutatecommon.ShouldMutateUnlabelledPods,
+	)
 	return shouldMutate
 }
 
@@ -61,16 +62,15 @@ func IsEnabledInNamespace(namespace string) bool {
 // namespace where datadog is installed.
 //
 // Cases:
-// - No enabled namespaces and no disabled namespaces: inject in all namespaces
-//   except the 2 namespaces excluded by default.
-// - Enabled namespaces and no disabled namespaces: inject only in the
-//   namespaces specified in the list of enabled namespaces. If one of the
-//   namespaces excluded by default is included in the list, it will be injected.
-// - Disabled namespaces and no enabled namespaces: inject only in the
-//   namespaces that are not included in the list of disabled namespaces and that
-//   are not one of the ones disabled by default.
-// - Enabled and disabled namespaces: return error.
-//
+//   - No enabled namespaces and no disabled namespaces: inject in all namespaces
+//     except the 2 namespaces excluded by default.
+//   - Enabled namespaces and no disabled namespaces: inject only in the
+//     namespaces specified in the list of enabled namespaces. If one of the
+//     namespaces excluded by default is included in the list, it will be injected.
+//   - Disabled namespaces and no enabled namespaces: inject only in the
+//     namespaces that are not included in the list of disabled namespaces and that
+//     are not one of the ones disabled by default.
+//   - Enabled and disabled namespaces: return error.
 func makeAPMSSINamespaceFilter() (*containers.Filter, error) {
 	apmEnabledNamespaces := config.Datadog().GetStringSlice("apm_config.instrumentation.enabled_namespaces")
 	apmDisabledNamespaces := config.Datadog().GetStringSlice("apm_config.instrumentation.disabled_namespaces")
@@ -124,6 +124,8 @@ func apmSSINamespaceFilter() (*containers.Filter, error) {
 	return autoInstrumentationFilter, autoInstrumentationFilterError
 }
 
+// UnsetAutoInstrumentationInjectionFilter unsets the singleton autoInstrumentationFilter.
+// Used for testing.
 func UnsetAutoInstrumentationInjectionFilter() {
 	autoInstrumentationInjectionFilterInit = sync.Once{}
 	autoInstrumentationFilter = nil
