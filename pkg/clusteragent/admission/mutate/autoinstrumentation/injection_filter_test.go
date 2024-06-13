@@ -106,7 +106,8 @@ func TestFailingInjectionConfig(t *testing.T) {
 			require.NotNil(t, filter, "we should always get a filter")
 
 			checkedNamespaces := map[string]bool{}
-			for ns, _ := range tt.expectedNamespaces {
+
+			for ns := range tt.expectedNamespaces {
 				checkedNamespaces[ns] = filter.IsNamespaceEligible(ns)
 			}
 
