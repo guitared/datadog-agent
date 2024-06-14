@@ -61,6 +61,12 @@
   - scp "metal_instance:/home/ubuntu/junit-${ARCH}-${TAG}-${TEST_SET}.tar.gz" $DD_AGENT_TESTING_DIR/ || true
   - ssh metal_instance "scp ${MICRO_VM_IP}:/ci-visibility/testjson.tar.gz /home/ubuntu/testjson-${ARCH}-${TAG}-${TEST_SET}.tar.gz" || true
   - scp "metal_instance:/home/ubuntu/testjson-${ARCH}-${TAG}-${TEST_SET}.tar.gz" $DD_AGENT_TESTING_DIR/ || true
+  # Retrieve complexity data
+  - |
+    if [ "${TEST_SET}" = "only_tracersuite" ] || [ "${TEST_SET}" = "all_tests" ];
+      ssh metal_instance "scp ${MICRO_VM_IP}:/verifier-complexity /home/ubuntu/verifier-complexity-${ARCH}-${TAG}-${TEST_SET}.tar.gz" || true
+      scp "/home/ubuntu/verifier-complexity-${ARCH}-${TAG}-${TEST_SET}.tar.gz" $DD_AGENT_TESTING_DIR/ || true
+    fi
   - !reference [.tag_kmt_ci_job]
 
 .upload_junit_kmt:
@@ -207,6 +213,10 @@
     - echo "CI_JOB_ID=${CI_JOB_ID}" >> $DD_AGENT_TESTING_DIR/job_env.txt
     - echo "CI_JOB_NAME=${CI_JOB_NAME}" >> $DD_AGENT_TESTING_DIR/job_env.txt
     - echo "CI_JOB_STAGE=${CI_JOB_STAGE}" >> $DD_AGENT_TESTING_DIR/job_env.txt
+    - |
+      if [ "${TEST_SET}" = "only_tracersuite" ] || [ "${TEST_SET}" = "all_tests" ]; then
+        export COLLECT_COMPLEXITY=yes
+      fi
   script:
     - INSTANCE_IP=$(jq --exit-status --arg ARCH $ARCH -r '.[$ARCH].ip' $CI_PROJECT_DIR/stack.output)
     - !reference [.shared_filters_and_queries]
@@ -223,7 +233,7 @@
     # ssh into each micro-vm and run initialization script. This script will also run the tests.
     - scp "$DD_AGENT_TESTING_DIR/job_env.txt" "metal_instance:/home/ubuntu/job_env-${ARCH}-${TAG}-${TEST_SET}.txt"
     - ssh metal_instance "scp /home/ubuntu/job_env-${ARCH}-${TAG}-${TEST_SET}.txt ${MICRO_VM_IP}:/job_env.txt"
-    - NESTED_VM_CMD="/home/ubuntu/connector -host ${MICRO_VM_IP} -user root -ssh-file /home/kernel-version-testing/ddvm_rsa -vm-cmd 'CI=true /root/fetch_dependencies.sh ${ARCH} && /opt/micro-vm-init.sh -test-tools /opt/testing-tools -retry ${RETRY} -test-root /opt/${TEST_COMPONENT}-tests -packages-run-config /opt/${TEST_SET}.json'"
+    - NESTED_VM_CMD="/home/ubuntu/connector -host ${MICRO_VM_IP} -user root -ssh-file /home/kernel-version-testing/ddvm_rsa -vm-cmd 'CI=true COLLECT_COMPLEXITY=${COLLECT_COMPLEXITY} /root/fetch_dependencies.sh ${ARCH} && /opt/micro-vm-init.sh -test-tools /opt/testing-tools -retry ${RETRY} -test-root /opt/${TEST_COMPONENT}-tests -packages-run-config /opt/${TEST_SET}.json'"
     - $CI_PROJECT_DIR/connector-$ARCH -host $INSTANCE_IP -user ubuntu -ssh-file $AWS_EC2_SSH_KEY_FILE -vm-cmd "${NESTED_VM_CMD}"
     - ssh metal_instance "ssh ${MICRO_VM_IP} '/opt/testing-tools/test-json-review'"
   artifacts:
