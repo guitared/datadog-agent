@@ -963,10 +963,24 @@ func hashMapNumberOfEntriesWithHelper(mp *ebpf.Map) (int64, error) {
 		},
 	}
 
+	/*
+		equivalent to the following C code, based on the fact that `for_each_map_elem`
+		returns the amount of entries visited, so visiting all the entries ensures we
+		get the amount of entries in the map.
+
+		int callback(struct bpf_map* map, const void* key, void* value, void * ctx) {
+			return 0;
+		}
+
+		int entry() {
+			return bpf_for_each_map_elem(fd, callback, NULL, 0);
+		}
+	*/
+
 	spec := &ebpf.ProgramSpec{
 		Type: ebpf.SocketFilter,
 		Instructions: asm.Instructions{
-			// main
+			// entry
 			btf.WithFuncMetadata(
 				asm.LoadMapPtr(asm.R1, mp.FD()), // map fd
 				entryBtf,
