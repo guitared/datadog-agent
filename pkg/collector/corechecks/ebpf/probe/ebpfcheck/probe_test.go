@@ -218,6 +218,14 @@ func TestHashMapNumberOfEntries(t *testing.T) {
 				}
 			}
 
+			if isForEachElemHelperAvailable() && mapType != ebpf.HashOfMaps {
+				t.Run("Helper", func(t *testing.T) {
+					num, err := hashMapNumberOfEntriesWithHelper(m)
+					require.NoError(t, err)
+					require.Equal(t, int64(filledEntries), num)
+				})
+			}
+
 			if maps.BatchAPISupported() && mapType != ebpf.HashOfMaps {
 				t.Run("BatchAPI", func(t *testing.T) {
 					num, err := hashMapNumberOfEntriesWithBatch(m, &buffers, 1)
