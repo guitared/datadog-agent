@@ -932,46 +932,32 @@ func hashMapNumberOfEntriesWithHelper(mp *ebpf.Map) (int64, error) {
 		},
 	}
 
+	u64Btf := &btf.Int{
+		Name:     "long",
+		Size:     8,
+		Encoding: btf.Unsigned,
+	}
+
 	callbackBtf := &btf.Func{
 		Name: "callback",
 		Type: &btf.FuncProto{
-			Return: &btf.Int{
-				Name:     "long",
-				Size:     8,
-				Encoding: btf.Signed,
-			},
+			Return: u64Btf,
 			Params: []btf.FuncParam{
 				{
 					Name: "map",
-					Type: &btf.Int{
-						Name:     "bpf_map",
-						Size:     8,
-						Encoding: btf.Unsigned,
-					},
+					Type: u64Btf,
 				},
 				{
 					Name: "key",
-					Type: &btf.Int{
-						Name:     "long",
-						Size:     8,
-						Encoding: btf.Unsigned,
-					},
+					Type: u64Btf,
 				},
 				{
 					Name: "value",
-					Type: &btf.Int{
-						Name:     "long",
-						Size:     8,
-						Encoding: btf.Unsigned,
-					},
+					Type: u64Btf,
 				},
 				{
 					Name: "ctx",
-					Type: &btf.Int{
-						Name:     "long",
-						Size:     8,
-						Encoding: btf.Unsigned,
-					},
+					Type: u64Btf,
 				},
 			},
 		},
@@ -1012,14 +998,9 @@ func hashMapNumberOfEntriesWithHelper(mp *ebpf.Map) (int64, error) {
 	}
 
 	prog, err := ebpf.NewProgramWithOptions(spec, ebpf.ProgramOptions{
-		LogLevel: ebpf.LogLevelInstruction | ebpf.LogLevelBranch | ebpf.LogLevelStats,
-		LogSize:  1073741823,
-		// LogDisabled: true,
+		LogDisabled: true,
 	})
 	if err != nil {
-		if verErr, ok := err.(*ebpf.VerifierError); ok {
-			log.Warnf("%+v\n", verErr)
-		}
 		return 0, err
 	}
 	defer prog.Close()
