@@ -1,6 +1,6 @@
 //go:generate go run github.com/mailru/easyjson/easyjson -gen_build_flags=-mod=mod -no_std_marshalers -build_tags linux $GOFILE
 //go:generate go run github.com/mailru/easyjson/easyjson -gen_build_flags=-mod=mod -no_std_marshalers -build_tags linux -output_filename serializers_base_linux_easyjson.go serializers_base.go
-//go:generate go run github.com/DataDog/datadog-agent/pkg/security/generators/backend_doc -output ../../../docs/cloud-workload-security/backend.schema.json
+//go:generate go run github.com/DataDog/datadog-agent/pkg/security/generators/backend_doc -output ../../../docs/cloud-workload-security/backend_linux.schema.json
 
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
@@ -466,6 +466,8 @@ type SecurityProfileContextSerializer struct {
 	Tags []string `json:"tags"`
 	// True if the corresponding event is part of this profile
 	EventInProfile bool `json:"event_in_profile"`
+	// State of the event type in this profile
+	EventTypeState string `json:"event_type_state"`
 }
 
 // SyscallSerializer serializes a syscall
@@ -1020,6 +1022,7 @@ func newSecurityProfileContextSerializer(event *model.Event, e *model.SecurityPr
 		Version:        e.Version,
 		Tags:           tags,
 		EventInProfile: event.IsInProfile(),
+		EventTypeState: e.EventTypeState.String(),
 	}
 }
 
