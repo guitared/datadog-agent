@@ -3,23 +3,22 @@
 
 extensions:
   health_check:
-    endpoint: localhost:13133
+    endpoint: 0.0.0.0:13133
   pprof:
-    endpoint: localhost:1777
+    endpoint: 0.0.0.0:1777
   zpages:
-    endpoint: localhost:55679
+    endpoint: 0.0.0.0:55679
   datadog:
-    endpoint: localhost:7777
+    endpoint: 0.0.0.0:7777
 
 
 receivers:
   otlp:
     protocols:
       grpc:
-        endpoint: 0.0.0.0:4317
       http:
-        endpoint: 0.0.0.0:4318
-    # Collect own metrics
+
+  # Collect own metrics
   prometheus:
     config:
       scrape_configs:
@@ -31,43 +30,31 @@ receivers:
         - source_labels: [__name__]
           regex: ".*grpc_io.*"
           action: drop
+
+processors:
+  batch:
+    timeout: 10s
+
 exporters:
   datadog:
-    traces:
-      span_name_as_resource_name: true
     hostname: "otelcol-docker"
     api:
       key: ${DD_API_KEY}
       site: ${DD_SITE}
-processors:
-  infraattributes:
-  batch:
-  # using the sampler
-  probabilistic_sampler:
-    sampling_percentage: 30
-connectors:
-  # Use datadog connector to compute stats for pre-sampled traces
-  datadog/connector:
-    traces:
-      span_name_as_resource_name: true
-      compute_stats_by_span_kind: true
-      peer_tags_aggregation: true
+  debug:
+
 service:
   extensions: [health_check, pprof, zpages, datadog]
   pipelines:
-    traces: # this pipeline computes APM stats
+    traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [datadog/connector]
-    traces/sampling: # this pipeline uses sampling and sends traces
-      receivers: [otlp]
-      processors: [probabilistic_sampler, infraattributes,batch]
-      exporters: [datadog]
+      exporters: [debug]
     metrics:
-      receivers: [otlp, datadog/connector, prometheus]
-      processors: [infraattributes,batch]
+      receivers: [otlp, prometheus]
+      processors: [batch]
       exporters: [datadog]
     logs:
       receivers: [otlp]
-      processors: [infraattributes, batch]
+      processors: [batch]
       exporters: [datadog]
