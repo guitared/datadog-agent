@@ -1019,7 +1019,7 @@ func hashMapNumberOfEntriesWithHelper(mp *ebpf.Map) (int64, error) {
 	}
 	defer prog.Close()
 
-	res, _, err := prog.Test(make([]byte, 14))
+	res, _, err := prog.Test(make([]byte, 32))
 	if err != nil {
 		return 0, err
 	}
