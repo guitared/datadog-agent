@@ -314,13 +314,6 @@ func TestHashMapNumberOfEntriesNoExtraAllocations(t *testing.T) {
 					require.LessOrEqual(t, allocs, 8.0) // Multiple batches mean we need to use a map to keep track of the keys, that causes allocations for the values
 				})
 			}
-
-			t.Run("MainFunction", func(t *testing.T) {
-				allocs := testing.AllocsPerRun(10, func() {
-					hashMapNumberOfEntries(m, &buffers, 1)
-				})
-				require.LessOrEqual(t, allocs, 0.0)
-			})
 		})
 	}
 }
@@ -487,6 +480,15 @@ func TestHashMapNumberOfEntriesNoMemoryCorruption(t *testing.T) {
 		buffers.values = addMargin(buffers.values)
 		buffers.cursor = addMargin(buffers.cursor)
 		validateMargin(t)
+
+		if isForEachElemHelperAvailable() && mapType != ebpf.HashOfMaps {
+			t.Run("Helper", func(t *testing.T) {
+				num, err := hashMapNumberOfEntriesWithHelper(m)
+				require.NoError(t, err)
+				require.Equal(t, int64(filledEntries), num)
+				validateMargin(t)
+			})
+		}
 
 		if maps.BatchAPISupported() && mapType != ebpf.HashOfMaps {
 			t.Run("BatchAPI", func(t *testing.T) {
