@@ -76,15 +76,21 @@ func (r *Releasable) OnRelease() {
 	r.onReleaseCallback()
 }
 
+// CGroupContext holds the cgroup context of an event
+type CGroupContext struct {
+	ID string `field:"id,handler:ResolveCGroupID"` // SECLDoc[id] Definition:`ID of the cgroup`
+}
+
 // ContainerContext holds the container context of an event
 type ContainerContext struct {
 	Releasable
-	ID        string   `field:"id,handler:ResolveContainerID"`                              // SECLDoc[id] Definition:`ID of the container`
-	CreatedAt uint64   `field:"created_at,handler:ResolveContainerCreatedAt"`               // SECLDoc[created_at] Definition:`Timestamp of the creation of the container``
-	Tags      []string `field:"tags,handler:ResolveContainerTags,opts:skip_ad,weight:9999"` // SECLDoc[tags] Definition:`Tags of the container`
-	Resolved  bool     `field:"-"`
-	Flags     uint64   `field:"-"`
-	Runtime   string   `field:"runtime,handler:ResolveContainerRuntime"` // SECLDoc[runtime] Definition:`Runtime managing the container`
+	CGroupContext `field:"cgroup,handler:ResolveContainerID"` // SECLDoc[id] Definition:`ID of the container`
+	ContainerID   string                                      `field:"id,handler:ResolveContainerID"`                              // SECLDoc[id] Definition:`ID of the container`
+	CreatedAt     uint64                                      `field:"created_at,handler:ResolveContainerCreatedAt"`               // SECLDoc[created_at] Definition:`Timestamp of the creation of the container``
+	Tags          []string                                    `field:"tags,handler:ResolveContainerTags,opts:skip_ad,weight:9999"` // SECLDoc[tags] Definition:`Tags of the container`
+	Resolved      bool                                        `field:"-"`
+	Flags         uint64                                      `field:"-"`
+	Runtime       string                                      `field:"runtime,handler:ResolveContainerRuntime"` // SECLDoc[runtime] Definition:`Runtime managing the container`
 }
 
 // SecurityProfileContext holds the security context of the profile
@@ -136,6 +142,7 @@ type BaseEvent struct {
 	// context shared with all events
 	ProcessContext         *ProcessContext        `field:"process" event:"*"`
 	ContainerContext       *ContainerContext      `field:"container" event:"*"`
+	CGroupContext          CGroupContext          `field:"cgroup" event:"*"`
 	SecurityProfileContext SecurityProfileContext `field:"-"`
 
 	// internal usage

@@ -40,8 +40,12 @@ func TestEventConsumerWrapperCopy(t *testing.T) {
 						},
 					},
 				},
-				ContainerContext: &model.ContainerContext{ID: "cid_exec"},
-				FieldHandlers:    &model.FakeFieldHandlers{},
+				ContainerContext: &model.ContainerContext{
+					CGroupContext: model.CGroupContext{
+						ID: "cid_exec",
+					},
+				},
+				FieldHandlers: &model.FakeFieldHandlers{},
 			}}
 		evHandler := &eventConsumerWrapper{}
 		_p := evHandler.Copy(ev)
@@ -76,8 +80,12 @@ func TestEventConsumerWrapperCopy(t *testing.T) {
 						},
 					},
 				},
-				ContainerContext: &model.ContainerContext{ID: "cid_fork"},
-				FieldHandlers:    &model.FakeFieldHandlers{},
+				ContainerContext: &model.ContainerContext{
+					CGroupContext: model.CGroupContext{
+						ID: "cid_fork",
+					},
+				},
+				FieldHandlers: &model.FakeFieldHandlers{},
 			}}
 		evHandler := &eventConsumerWrapper{}
 		_p := evHandler.Copy(ev)

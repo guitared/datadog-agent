@@ -156,6 +156,11 @@ func (fh *EBPFLessFieldHandlers) ResolveEventTime(ev *model.Event, _ *model.Base
 	return ev.Timestamp
 }
 
+// ResolveCGroupID resolves the cgroup ID of the event
+func (fh *EBPFLessFieldHandlers) ResolveCGroupID(ev *model.Event, e *model.CGroupContext) string {
+	return ""
+}
+
 // ResolveContainerID resolves the container ID of the event
 func (fh *EBPFLessFieldHandlers) ResolveContainerID(ev *model.Event, e *model.ContainerContext) string {
 	if len(e.ID) == 0 {
@@ -182,6 +187,11 @@ func (fh *EBPFLessFieldHandlers) ResolveContainerTags(_ *model.Event, e *model.C
 		e.Tags = fh.resolvers.TagsResolver.Resolve(e.ID)
 	}
 	return e.Tags
+}
+
+// ResolveProcessContainerID resolves the container ID of the event
+func (fh *EBPFLessFieldHandlers) ResolveProcessContainerID(ev *model.Event, e *model.Process) string {
+	return fh.ResolveContainerID(ev, ev.ContainerContext)
 }
 
 // ResolveProcessCreatedAt resolves process creation time

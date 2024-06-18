@@ -9,24 +9,9 @@ package containerutils
 import (
 	"regexp"
 	"strings"
-)
 
-// CGroup managers
-const (
-	CGroupManagerDocker uint64 = iota + 1
-	CGroupManagerCRIO
-	CGroupManagerPodman
-	CGroupManagerCRI
-	CGroupManagerSystemd
+	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
 )
-
-// RuntimePrefixes holds the cgroup prefixed used by the different runtimes
-var RuntimePrefixes = map[string]uint64{
-	"docker-":         CGroupManagerDocker,
-	"cri-containerd-": CGroupManagerCRI,
-	"crio-":           CGroupManagerCRIO,
-	"libpod-":         CGroupManagerPodman,
-}
 
 // ContainerIDPatternStr defines the regexp used to match container IDs
 // ([0-9a-fA-F]{64}) is standard container id used pretty much everywhere, length: 64
@@ -62,15 +47,7 @@ func FindContainerID(s string) (string, uint64) {
 	// ensure the found containerID is delimited by charaters other than a-zA-Z0-9, or that
 	// it starts or/and ends the initial string
 
-	var flags uint64
-	containerID := s[match[0]:match[1]]
-	for runtimePrefix, runtimeFlag := range RuntimePrefixes {
-		if strings.HasPrefix(containerID, runtimePrefix) {
-			flags = runtimeFlag
-			containerID = containerID[len(runtimePrefix):]
-			break
-		}
-	}
-
+	cgroupID := s[match[0]:match[1]]
+	containerID, flags := model.GetContainerFromCgroup(cgroupID)
 	return containerID, flags
 }

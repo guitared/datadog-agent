@@ -29,6 +29,11 @@ func (fh *FieldHandlers) ResolveEventTime(ev *model.Event, _ *model.BaseEvent) t
 	return ev.Timestamp
 }
 
+// ResolveCGroupID retrieves the cgroup id of the container
+func (fh *FieldHandlers) ResolveCGroupID(ev *model.Event, _ *model.CGroupContext) string {
+	return ""
+}
+
 // ResolveContainerContext retrieve the ContainerContext of the event
 func (fh *FieldHandlers) ResolveContainerContext(ev *model.Event) (*model.ContainerContext, bool) {
 	return ev.ContainerContext, ev.ContainerContext != nil

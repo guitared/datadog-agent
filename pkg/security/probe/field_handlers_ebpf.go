@@ -477,11 +477,32 @@ func (fh *EBPFFieldHandlers) ResolveHashes(eventType model.EventType, process *m
 	return fh.resolvers.HashResolver.ComputeHashes(eventType, process, file)
 }
 
+// ResolveCGroupID resolves the cgroup ID of the event
+func (fh *EBPFFieldHandlers) ResolveCGroupID(ev *model.Event, e *model.CGroupContext) string {
+	if len(e.ID) == 0 {
+		if entry, _ := fh.ResolveProcessCacheEntry(ev); entry != nil {
+			e.ID = entry.ContainerID
+			ev.ContainerContext.Flags = uint64(entry.CGroup.Flags)
+		}
+	}
+
+	if e.ID != "" {
+		for prefix, flags := range model.RuntimePrefixes {
+			if (ev.ContainerContext.Flags & flags) != 0 {
+				return prefix + e.ID
+			}
+		}
+	}
+
+	return e.ID
+}
+
 // ResolveContainerID resolves the container ID of the event
 func (fh *EBPFFieldHandlers) ResolveContainerID(ev *model.Event, e *model.ContainerContext) string {
 	if len(e.ID) == 0 {
 		if entry, _ := fh.ResolveProcessCacheEntry(ev); entry != nil {
 			e.ID = entry.ContainerID
+			return model.GetCgroupFromContainer(entry.ContainerID, uint64(entry.CGroup.Flags))
 		}
 	}
 	return e.ID
@@ -503,6 +524,11 @@ func (fh *EBPFFieldHandlers) ResolveContainerTags(_ *model.Event, e *model.Conta
 		e.Tags = fh.resolvers.TagsResolver.Resolve(e.ID)
 	}
 	return e.Tags
+}
+
+// ResolveProcessContainerID resolves the container ID of the event
+func (fh *EBPFFieldHandlers) ResolveProcessContainerID(ev *model.Event, e *model.Process) string {
+	return fh.ResolveContainerID(ev, ev.ContainerContext)
 }
 
 // ResolveProcessCreatedAt resolves process creation time

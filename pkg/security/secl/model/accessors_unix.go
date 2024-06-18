@@ -200,6 +200,15 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 			Field:  field,
 			Weight: eval.FunctionWeight,
 		}, nil
+	case "cgroup.id":
+		return &eval.StringEvaluator{
+			EvalFnc: func(ctx *eval.Context) string {
+				ev := ctx.Event.(*Event)
+				return ev.FieldHandlers.ResolveCGroupID(ev, &ev.BaseEvent.CGroupContext)
+			},
+			Field:  field,
+			Weight: eval.HandlerWeight,
+		}, nil
 	case "chdir.file.change_time":
 		return &eval.IntEvaluator{
 			EvalFnc: func(ctx *eval.Context) int {
@@ -1087,6 +1096,15 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 			Field:  field,
 			Weight: eval.FunctionWeight,
 		}, nil
+	case "exec.cgroup.id":
+		return &eval.StringEvaluator{
+			EvalFnc: func(ctx *eval.Context) string {
+				ev := ctx.Event.(*Event)
+				return ev.Exec.Process.CGroup.ID
+			},
+			Field:  field,
+			Weight: eval.FunctionWeight,
+		}, nil
 	case "exec.comm":
 		return &eval.StringEvaluator{
 			EvalFnc: func(ctx *eval.Context) string {
@@ -1100,10 +1118,10 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 		return &eval.StringEvaluator{
 			EvalFnc: func(ctx *eval.Context) string {
 				ev := ctx.Event.(*Event)
-				return ev.Exec.Process.ContainerID
+				return ev.FieldHandlers.ResolveProcessContainerID(ev, ev.Exec.Process)
 			},
 			Field:  field,
-			Weight: eval.FunctionWeight,
+			Weight: eval.HandlerWeight,
 		}, nil
 	case "exec.created_at":
 		return &eval.IntEvaluator{
@@ -1896,6 +1914,15 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 			Field:  field,
 			Weight: eval.FunctionWeight,
 		}, nil
+	case "exit.cgroup.id":
+		return &eval.StringEvaluator{
+			EvalFnc: func(ctx *eval.Context) string {
+				ev := ctx.Event.(*Event)
+				return ev.Exit.Process.CGroup.ID
+			},
+			Field:  field,
+			Weight: eval.FunctionWeight,
+		}, nil
 	case "exit.code":
 		return &eval.IntEvaluator{
 			EvalFnc: func(ctx *eval.Context) int {
@@ -1918,10 +1945,10 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 		return &eval.StringEvaluator{
 			EvalFnc: func(ctx *eval.Context) string {
 				ev := ctx.Event.(*Event)
-				return ev.Exit.Process.ContainerID
+				return ev.FieldHandlers.ResolveProcessContainerID(ev, ev.Exit.Process)
 			},
 			Field:  field,
-			Weight: eval.FunctionWeight,
+			Weight: eval.HandlerWeight,
 		}, nil
 	case "exit.created_at":
 		return &eval.IntEvaluator{
@@ -4263,6 +4290,26 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 			}, Field: field,
 			Weight: eval.IteratorWeight,
 		}, nil
+	case "process.ancestors.cgroup.id":
+		return &eval.StringArrayEvaluator{
+			EvalFnc: func(ctx *eval.Context) []string {
+				if result, ok := ctx.StringCache[field]; ok {
+					return result
+				}
+				var results []string
+				iterator := &ProcessAncestorsIterator{}
+				value := iterator.Front(ctx)
+				for value != nil {
+					element := (*ProcessCacheEntry)(value)
+					result := element.ProcessContext.Process.CGroup.ID
+					results = append(results, result)
+					value = iterator.Next()
+				}
+				ctx.StringCache[field] = results
+				return results
+			}, Field: field,
+			Weight: eval.IteratorWeight,
+		}, nil
 	case "process.ancestors.comm":
 		return &eval.StringArrayEvaluator{
 			EvalFnc: func(ctx *eval.Context) []string {
@@ -4286,6 +4333,7 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 	case "process.ancestors.container.id":
 		return &eval.StringArrayEvaluator{
 			EvalFnc: func(ctx *eval.Context) []string {
+				ev := ctx.Event.(*Event)
 				if result, ok := ctx.StringCache[field]; ok {
 					return result
 				}
@@ -4294,7 +4342,7 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 				value := iterator.Front(ctx)
 				for value != nil {
 					element := (*ProcessCacheEntry)(value)
-					result := element.ProcessContext.Process.ContainerID
+					result := ev.FieldHandlers.ResolveProcessContainerID(ev, &element.ProcessContext.Process)
 					results = append(results, result)
 					value = iterator.Next()
 				}
@@ -5896,6 +5944,15 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 			Field:  field,
 			Weight: eval.FunctionWeight,
 		}, nil
+	case "process.cgroup.id":
+		return &eval.StringEvaluator{
+			EvalFnc: func(ctx *eval.Context) string {
+				ev := ctx.Event.(*Event)
+				return ev.BaseEvent.ProcessContext.Process.CGroup.ID
+			},
+			Field:  field,
+			Weight: eval.FunctionWeight,
+		}, nil
 	case "process.comm":
 		return &eval.StringEvaluator{
 			EvalFnc: func(ctx *eval.Context) string {
@@ -5909,10 +5966,10 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 		return &eval.StringEvaluator{
 			EvalFnc: func(ctx *eval.Context) string {
 				ev := ctx.Event.(*Event)
-				return ev.BaseEvent.ProcessContext.Process.ContainerID
+				return ev.FieldHandlers.ResolveProcessContainerID(ev, &ev.BaseEvent.ProcessContext.Process)
 			},
 			Field:  field,
-			Weight: eval.FunctionWeight,
+			Weight: eval.HandlerWeight,
 		}, nil
 	case "process.created_at":
 		return &eval.IntEvaluator{
@@ -6630,6 +6687,18 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 			Field:  field,
 			Weight: eval.FunctionWeight,
 		}, nil
+	case "process.parent.cgroup.id":
+		return &eval.StringEvaluator{
+			EvalFnc: func(ctx *eval.Context) string {
+				ev := ctx.Event.(*Event)
+				if !ev.BaseEvent.ProcessContext.HasParent() {
+					return ""
+				}
+				return ev.BaseEvent.ProcessContext.Parent.CGroup.ID
+			},
+			Field:  field,
+			Weight: eval.FunctionWeight,
+		}, nil
 	case "process.parent.comm":
 		return &eval.StringEvaluator{
 			EvalFnc: func(ctx *eval.Context) string {
@@ -6649,10 +6718,10 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 				if !ev.BaseEvent.ProcessContext.HasParent() {
 					return ""
 				}
-				return ev.BaseEvent.ProcessContext.Parent.ContainerID
+				return ev.FieldHandlers.ResolveProcessContainerID(ev, ev.BaseEvent.ProcessContext.Parent)
 			},
 			Field:  field,
-			Weight: eval.FunctionWeight,
+			Weight: eval.HandlerWeight,
 		}, nil
 	case "process.parent.created_at":
 		return &eval.IntEvaluator{
@@ -7803,6 +7872,26 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 			}, Field: field,
 			Weight: eval.IteratorWeight,
 		}, nil
+	case "ptrace.tracee.ancestors.cgroup.id":
+		return &eval.StringArrayEvaluator{
+			EvalFnc: func(ctx *eval.Context) []string {
+				if result, ok := ctx.StringCache[field]; ok {
+					return result
+				}
+				var results []string
+				iterator := &ProcessAncestorsIterator{}
+				value := iterator.Front(ctx)
+				for value != nil {
+					element := (*ProcessCacheEntry)(value)
+					result := element.ProcessContext.Process.CGroup.ID
+					results = append(results, result)
+					value = iterator.Next()
+				}
+				ctx.StringCache[field] = results
+				return results
+			}, Field: field,
+			Weight: eval.IteratorWeight,
+		}, nil
 	case "ptrace.tracee.ancestors.comm":
 		return &eval.StringArrayEvaluator{
 			EvalFnc: func(ctx *eval.Context) []string {
@@ -7826,6 +7915,7 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 	case "ptrace.tracee.ancestors.container.id":
 		return &eval.StringArrayEvaluator{
 			EvalFnc: func(ctx *eval.Context) []string {
+				ev := ctx.Event.(*Event)
 				if result, ok := ctx.StringCache[field]; ok {
 					return result
 				}
@@ -7834,7 +7924,7 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 				value := iterator.Front(ctx)
 				for value != nil {
 					element := (*ProcessCacheEntry)(value)
-					result := element.ProcessContext.Process.ContainerID
+					result := ev.FieldHandlers.ResolveProcessContainerID(ev, &element.ProcessContext.Process)
 					results = append(results, result)
 					value = iterator.Next()
 				}
@@ -9436,6 +9526,15 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 			Field:  field,
 			Weight: eval.FunctionWeight,
 		}, nil
+	case "ptrace.tracee.cgroup.id":
+		return &eval.StringEvaluator{
+			EvalFnc: func(ctx *eval.Context) string {
+				ev := ctx.Event.(*Event)
+				return ev.PTrace.Tracee.Process.CGroup.ID
+			},
+			Field:  field,
+			Weight: eval.FunctionWeight,
+		}, nil
 	case "ptrace.tracee.comm":
 		return &eval.StringEvaluator{
 			EvalFnc: func(ctx *eval.Context) string {
@@ -9449,10 +9548,10 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 		return &eval.StringEvaluator{
 			EvalFnc: func(ctx *eval.Context) string {
 				ev := ctx.Event.(*Event)
-				return ev.PTrace.Tracee.Process.ContainerID
+				return ev.FieldHandlers.ResolveProcessContainerID(ev, &ev.PTrace.Tracee.Process)
 			},
 			Field:  field,
-			Weight: eval.FunctionWeight,
+			Weight: eval.HandlerWeight,
 		}, nil
 	case "ptrace.tracee.created_at":
 		return &eval.IntEvaluator{
@@ -10170,6 +10269,18 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 			Field:  field,
 			Weight: eval.FunctionWeight,
 		}, nil
+	case "ptrace.tracee.parent.cgroup.id":
+		return &eval.StringEvaluator{
+			EvalFnc: func(ctx *eval.Context) string {
+				ev := ctx.Event.(*Event)
+				if !ev.PTrace.Tracee.HasParent() {
+					return ""
+				}
+				return ev.PTrace.Tracee.Parent.CGroup.ID
+			},
+			Field:  field,
+			Weight: eval.FunctionWeight,
+		}, nil
 	case "ptrace.tracee.parent.comm":
 		return &eval.StringEvaluator{
 			EvalFnc: func(ctx *eval.Context) string {
@@ -10189,10 +10300,10 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 				if !ev.PTrace.Tracee.HasParent() {
 					return ""
 				}
-				return ev.PTrace.Tracee.Parent.ContainerID
+				return ev.FieldHandlers.ResolveProcessContainerID(ev, ev.PTrace.Tracee.Parent)
 			},
 			Field:  field,
-			Weight: eval.FunctionWeight,
+			Weight: eval.HandlerWeight,
 		}, nil
 	case "ptrace.tracee.parent.created_at":
 		return &eval.IntEvaluator{
@@ -12479,6 +12590,26 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 			}, Field: field,
 			Weight: eval.IteratorWeight,
 		}, nil
+	case "signal.target.ancestors.cgroup.id":
+		return &eval.StringArrayEvaluator{
+			EvalFnc: func(ctx *eval.Context) []string {
+				if result, ok := ctx.StringCache[field]; ok {
+					return result
+				}
+				var results []string
+				iterator := &ProcessAncestorsIterator{}
+				value := iterator.Front(ctx)
+				for value != nil {
+					element := (*ProcessCacheEntry)(value)
+					result := element.ProcessContext.Process.CGroup.ID
+					results = append(results, result)
+					value = iterator.Next()
+				}
+				ctx.StringCache[field] = results
+				return results
+			}, Field: field,
+			Weight: eval.IteratorWeight,
+		}, nil
 	case "signal.target.ancestors.comm":
 		return &eval.StringArrayEvaluator{
 			EvalFnc: func(ctx *eval.Context) []string {
@@ -12502,6 +12633,7 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 	case "signal.target.ancestors.container.id":
 		return &eval.StringArrayEvaluator{
 			EvalFnc: func(ctx *eval.Context) []string {
+				ev := ctx.Event.(*Event)
 				if result, ok := ctx.StringCache[field]; ok {
 					return result
 				}
@@ -12510,7 +12642,7 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 				value := iterator.Front(ctx)
 				for value != nil {
 					element := (*ProcessCacheEntry)(value)
-					result := element.ProcessContext.Process.ContainerID
+					result := ev.FieldHandlers.ResolveProcessContainerID(ev, &element.ProcessContext.Process)
 					results = append(results, result)
 					value = iterator.Next()
 				}
@@ -14112,6 +14244,15 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 			Field:  field,
 			Weight: eval.FunctionWeight,
 		}, nil
+	case "signal.target.cgroup.id":
+		return &eval.StringEvaluator{
+			EvalFnc: func(ctx *eval.Context) string {
+				ev := ctx.Event.(*Event)
+				return ev.Signal.Target.Process.CGroup.ID
+			},
+			Field:  field,
+			Weight: eval.FunctionWeight,
+		}, nil
 	case "signal.target.comm":
 		return &eval.StringEvaluator{
 			EvalFnc: func(ctx *eval.Context) string {
@@ -14125,10 +14266,10 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 		return &eval.StringEvaluator{
 			EvalFnc: func(ctx *eval.Context) string {
 				ev := ctx.Event.(*Event)
-				return ev.Signal.Target.Process.ContainerID
+				return ev.FieldHandlers.ResolveProcessContainerID(ev, &ev.Signal.Target.Process)
 			},
 			Field:  field,
-			Weight: eval.FunctionWeight,
+			Weight: eval.HandlerWeight,
 		}, nil
 	case "signal.target.created_at":
 		return &eval.IntEvaluator{
@@ -14846,6 +14987,18 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 			Field:  field,
 			Weight: eval.FunctionWeight,
 		}, nil
+	case "signal.target.parent.cgroup.id":
+		return &eval.StringEvaluator{
+			EvalFnc: func(ctx *eval.Context) string {
+				ev := ctx.Event.(*Event)
+				if !ev.Signal.Target.HasParent() {
+					return ""
+				}
+				return ev.Signal.Target.Parent.CGroup.ID
+			},
+			Field:  field,
+			Weight: eval.FunctionWeight,
+		}, nil
 	case "signal.target.parent.comm":
 		return &eval.StringEvaluator{
 			EvalFnc: func(ctx *eval.Context) string {
@@ -14865,10 +15018,10 @@ func (m *Model) GetEvaluator(field eval.Field, regID eval.RegisterID) (eval.Eval
 				if !ev.Signal.Target.HasParent() {
 					return ""
 				}
-				return ev.Signal.Target.Parent.ContainerID
+				return ev.FieldHandlers.ResolveProcessContainerID(ev, ev.Signal.Target.Parent)
 			},
 			Field:  field,
-			Weight: eval.FunctionWeight,
+			Weight: eval.HandlerWeight,
 		}, nil
 	case "signal.target.parent.created_at":
 		return &eval.IntEvaluator{
@@ -16488,6 +16641,7 @@ func (ev *Event) GetFields() []eval.Field {
 		"bpf.retval",
 		"capset.cap_effective",
 		"capset.cap_permitted",
+		"cgroup.id",
 		"chdir.file.change_time",
 		"chdir.file.filesystem",
 		"chdir.file.gid",
@@ -16585,6 +16739,7 @@ func (ev *Event) GetFields() []eval.Field {
 		"exec.argv0",
 		"exec.cap_effective",
 		"exec.cap_permitted",
+		"exec.cgroup.id",
 		"exec.comm",
 		"exec.container.id",
 		"exec.created_at",
@@ -16662,6 +16817,7 @@ func (ev *Event) GetFields() []eval.Field {
 		"exit.cap_effective",
 		"exit.cap_permitted",
 		"exit.cause",
+		"exit.cgroup.id",
 		"exit.code",
 		"exit.comm",
 		"exit.container.id",
@@ -16899,6 +17055,7 @@ func (ev *Event) GetFields() []eval.Field {
 		"process.ancestors.argv0",
 		"process.ancestors.cap_effective",
 		"process.ancestors.cap_permitted",
+		"process.ancestors.cgroup.id",
 		"process.ancestors.comm",
 		"process.ancestors.container.id",
 		"process.ancestors.created_at",
@@ -16974,6 +17131,7 @@ func (ev *Event) GetFields() []eval.Field {
 		"process.argv0",
 		"process.cap_effective",
 		"process.cap_permitted",
+		"process.cgroup.id",
 		"process.comm",
 		"process.container.id",
 		"process.created_at",
@@ -17040,6 +17198,7 @@ func (ev *Event) GetFields() []eval.Field {
 		"process.parent.argv0",
 		"process.parent.cap_effective",
 		"process.parent.cap_permitted",
+		"process.parent.cgroup.id",
 		"process.parent.comm",
 		"process.parent.container.id",
 		"process.parent.created_at",
@@ -17126,6 +17285,7 @@ func (ev *Event) GetFields() []eval.Field {
 		"ptrace.tracee.ancestors.argv0",
 		"ptrace.tracee.ancestors.cap_effective",
 		"ptrace.tracee.ancestors.cap_permitted",
+		"ptrace.tracee.ancestors.cgroup.id",
 		"ptrace.tracee.ancestors.comm",
 		"ptrace.tracee.ancestors.container.id",
 		"ptrace.tracee.ancestors.created_at",
@@ -17201,6 +17361,7 @@ func (ev *Event) GetFields() []eval.Field {
 		"ptrace.tracee.argv0",
 		"ptrace.tracee.cap_effective",
 		"ptrace.tracee.cap_permitted",
+		"ptrace.tracee.cgroup.id",
 		"ptrace.tracee.comm",
 		"ptrace.tracee.container.id",
 		"ptrace.tracee.created_at",
@@ -17267,6 +17428,7 @@ func (ev *Event) GetFields() []eval.Field {
 		"ptrace.tracee.parent.argv0",
 		"ptrace.tracee.parent.cap_effective",
 		"ptrace.tracee.parent.cap_permitted",
+		"ptrace.tracee.parent.cgroup.id",
 		"ptrace.tracee.parent.comm",
 		"ptrace.tracee.parent.container.id",
 		"ptrace.tracee.parent.created_at",
@@ -17477,6 +17639,7 @@ func (ev *Event) GetFields() []eval.Field {
 		"signal.target.ancestors.argv0",
 		"signal.target.ancestors.cap_effective",
 		"signal.target.ancestors.cap_permitted",
+		"signal.target.ancestors.cgroup.id",
 		"signal.target.ancestors.comm",
 		"signal.target.ancestors.container.id",
 		"signal.target.ancestors.created_at",
@@ -17552,6 +17715,7 @@ func (ev *Event) GetFields() []eval.Field {
 		"signal.target.argv0",
 		"signal.target.cap_effective",
 		"signal.target.cap_permitted",
+		"signal.target.cgroup.id",
 		"signal.target.comm",
 		"signal.target.container.id",
 		"signal.target.created_at",
@@ -17618,6 +17782,7 @@ func (ev *Event) GetFields() []eval.Field {
 		"signal.target.parent.argv0",
 		"signal.target.parent.cap_effective",
 		"signal.target.parent.cap_permitted",
+		"signal.target.parent.cgroup.id",
 		"signal.target.parent.comm",
 		"signal.target.parent.container.id",
 		"signal.target.parent.created_at",
@@ -17801,6 +17966,8 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 		return int(ev.Capset.CapEffective), nil
 	case "capset.cap_permitted":
 		return int(ev.Capset.CapPermitted), nil
+	case "cgroup.id":
+		return ev.FieldHandlers.ResolveCGroupID(ev, &ev.BaseEvent.CGroupContext), nil
 	case "chdir.file.change_time":
 		return int(ev.Chdir.File.FileFields.CTime), nil
 	case "chdir.file.filesystem":
@@ -17995,10 +18162,12 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 		return int(ev.Exec.Process.Credentials.CapEffective), nil
 	case "exec.cap_permitted":
 		return int(ev.Exec.Process.Credentials.CapPermitted), nil
+	case "exec.cgroup.id":
+		return ev.Exec.Process.CGroup.ID, nil
 	case "exec.comm":
 		return ev.Exec.Process.Comm, nil
 	case "exec.container.id":
-		return ev.Exec.Process.ContainerID, nil
+		return ev.FieldHandlers.ResolveProcessContainerID(ev, ev.Exec.Process), nil
 	case "exec.created_at":
 		return int(ev.FieldHandlers.ResolveProcessCreatedAt(ev, ev.Exec.Process)), nil
 	case "exec.egid":
@@ -18257,12 +18426,14 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 		return int(ev.Exit.Process.Credentials.CapPermitted), nil
 	case "exit.cause":
 		return int(ev.Exit.Cause), nil
+	case "exit.cgroup.id":
+		return ev.Exit.Process.CGroup.ID, nil
 	case "exit.code":
 		return int(ev.Exit.Code), nil
 	case "exit.comm":
 		return ev.Exit.Process.Comm, nil
 	case "exit.container.id":
-		return ev.Exit.Process.ContainerID, nil
+		return ev.FieldHandlers.ResolveProcessContainerID(ev, ev.Exit.Process), nil
 	case "exit.created_at":
 		return int(ev.FieldHandlers.ResolveProcessCreatedAt(ev, ev.Exit.Process)), nil
 	case "exit.egid":
@@ -18919,6 +19090,18 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 			ptr = iterator.Next()
 		}
 		return values, nil
+	case "process.ancestors.cgroup.id":
+		var values []string
+		ctx := eval.NewContext(ev)
+		iterator := &ProcessAncestorsIterator{}
+		ptr := iterator.Front(ctx)
+		for ptr != nil {
+			element := (*ProcessCacheEntry)(ptr)
+			result := element.ProcessContext.Process.CGroup.ID
+			values = append(values, result)
+			ptr = iterator.Next()
+		}
+		return values, nil
 	case "process.ancestors.comm":
 		var values []string
 		ctx := eval.NewContext(ev)
@@ -18938,7 +19121,7 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 		ptr := iterator.Front(ctx)
 		for ptr != nil {
 			element := (*ProcessCacheEntry)(ptr)
-			result := element.ProcessContext.Process.ContainerID
+			result := ev.FieldHandlers.ResolveProcessContainerID(ev, &element.ProcessContext.Process)
 			values = append(values, result)
 			ptr = iterator.Next()
 		}
@@ -19739,10 +19922,12 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 		return int(ev.BaseEvent.ProcessContext.Process.Credentials.CapEffective), nil
 	case "process.cap_permitted":
 		return int(ev.BaseEvent.ProcessContext.Process.Credentials.CapPermitted), nil
+	case "process.cgroup.id":
+		return ev.BaseEvent.ProcessContext.Process.CGroup.ID, nil
 	case "process.comm":
 		return ev.BaseEvent.ProcessContext.Process.Comm, nil
 	case "process.container.id":
-		return ev.BaseEvent.ProcessContext.Process.ContainerID, nil
+		return ev.FieldHandlers.ResolveProcessContainerID(ev, &ev.BaseEvent.ProcessContext.Process), nil
 	case "process.created_at":
 		return int(ev.FieldHandlers.ResolveProcessCreatedAt(ev, &ev.BaseEvent.ProcessContext.Process)), nil
 	case "process.egid":
@@ -20003,6 +20188,11 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 			return 0, &eval.ErrNotSupported{Field: field}
 		}
 		return int(ev.BaseEvent.ProcessContext.Parent.Credentials.CapPermitted), nil
+	case "process.parent.cgroup.id":
+		if !ev.BaseEvent.ProcessContext.HasParent() {
+			return "", &eval.ErrNotSupported{Field: field}
+		}
+		return ev.BaseEvent.ProcessContext.Parent.CGroup.ID, nil
 	case "process.parent.comm":
 		if !ev.BaseEvent.ProcessContext.HasParent() {
 			return "", &eval.ErrNotSupported{Field: field}
@@ -20012,7 +20202,7 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 		if !ev.BaseEvent.ProcessContext.HasParent() {
 			return "", &eval.ErrNotSupported{Field: field}
 		}
-		return ev.BaseEvent.ProcessContext.Parent.ContainerID, nil
+		return ev.FieldHandlers.ResolveProcessContainerID(ev, ev.BaseEvent.ProcessContext.Parent), nil
 	case "process.parent.created_at":
 		if !ev.BaseEvent.ProcessContext.HasParent() {
 			return 0, &eval.ErrNotSupported{Field: field}
@@ -20552,6 +20742,18 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 			ptr = iterator.Next()
 		}
 		return values, nil
+	case "ptrace.tracee.ancestors.cgroup.id":
+		var values []string
+		ctx := eval.NewContext(ev)
+		iterator := &ProcessAncestorsIterator{}
+		ptr := iterator.Front(ctx)
+		for ptr != nil {
+			element := (*ProcessCacheEntry)(ptr)
+			result := element.ProcessContext.Process.CGroup.ID
+			values = append(values, result)
+			ptr = iterator.Next()
+		}
+		return values, nil
 	case "ptrace.tracee.ancestors.comm":
 		var values []string
 		ctx := eval.NewContext(ev)
@@ -20571,7 +20773,7 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 		ptr := iterator.Front(ctx)
 		for ptr != nil {
 			element := (*ProcessCacheEntry)(ptr)
-			result := element.ProcessContext.Process.ContainerID
+			result := ev.FieldHandlers.ResolveProcessContainerID(ev, &element.ProcessContext.Process)
 			values = append(values, result)
 			ptr = iterator.Next()
 		}
@@ -21372,10 +21574,12 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 		return int(ev.PTrace.Tracee.Process.Credentials.CapEffective), nil
 	case "ptrace.tracee.cap_permitted":
 		return int(ev.PTrace.Tracee.Process.Credentials.CapPermitted), nil
+	case "ptrace.tracee.cgroup.id":
+		return ev.PTrace.Tracee.Process.CGroup.ID, nil
 	case "ptrace.tracee.comm":
 		return ev.PTrace.Tracee.Process.Comm, nil
 	case "ptrace.tracee.container.id":
-		return ev.PTrace.Tracee.Process.ContainerID, nil
+		return ev.FieldHandlers.ResolveProcessContainerID(ev, &ev.PTrace.Tracee.Process), nil
 	case "ptrace.tracee.created_at":
 		return int(ev.FieldHandlers.ResolveProcessCreatedAt(ev, &ev.PTrace.Tracee.Process)), nil
 	case "ptrace.tracee.egid":
@@ -21636,6 +21840,11 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 			return 0, &eval.ErrNotSupported{Field: field}
 		}
 		return int(ev.PTrace.Tracee.Parent.Credentials.CapPermitted), nil
+	case "ptrace.tracee.parent.cgroup.id":
+		if !ev.PTrace.Tracee.HasParent() {
+			return "", &eval.ErrNotSupported{Field: field}
+		}
+		return ev.PTrace.Tracee.Parent.CGroup.ID, nil
 	case "ptrace.tracee.parent.comm":
 		if !ev.PTrace.Tracee.HasParent() {
 			return "", &eval.ErrNotSupported{Field: field}
@@ -21645,7 +21854,7 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 		if !ev.PTrace.Tracee.HasParent() {
 			return "", &eval.ErrNotSupported{Field: field}
 		}
-		return ev.PTrace.Tracee.Parent.ContainerID, nil
+		return ev.FieldHandlers.ResolveProcessContainerID(ev, ev.PTrace.Tracee.Parent), nil
 	case "ptrace.tracee.parent.created_at":
 		if !ev.PTrace.Tracee.HasParent() {
 			return 0, &eval.ErrNotSupported{Field: field}
@@ -22433,6 +22642,18 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 			ptr = iterator.Next()
 		}
 		return values, nil
+	case "signal.target.ancestors.cgroup.id":
+		var values []string
+		ctx := eval.NewContext(ev)
+		iterator := &ProcessAncestorsIterator{}
+		ptr := iterator.Front(ctx)
+		for ptr != nil {
+			element := (*ProcessCacheEntry)(ptr)
+			result := element.ProcessContext.Process.CGroup.ID
+			values = append(values, result)
+			ptr = iterator.Next()
+		}
+		return values, nil
 	case "signal.target.ancestors.comm":
 		var values []string
 		ctx := eval.NewContext(ev)
@@ -22452,7 +22673,7 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 		ptr := iterator.Front(ctx)
 		for ptr != nil {
 			element := (*ProcessCacheEntry)(ptr)
-			result := element.ProcessContext.Process.ContainerID
+			result := ev.FieldHandlers.ResolveProcessContainerID(ev, &element.ProcessContext.Process)
 			values = append(values, result)
 			ptr = iterator.Next()
 		}
@@ -23253,10 +23474,12 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 		return int(ev.Signal.Target.Process.Credentials.CapEffective), nil
 	case "signal.target.cap_permitted":
 		return int(ev.Signal.Target.Process.Credentials.CapPermitted), nil
+	case "signal.target.cgroup.id":
+		return ev.Signal.Target.Process.CGroup.ID, nil
 	case "signal.target.comm":
 		return ev.Signal.Target.Process.Comm, nil
 	case "signal.target.container.id":
-		return ev.Signal.Target.Process.ContainerID, nil
+		return ev.FieldHandlers.ResolveProcessContainerID(ev, &ev.Signal.Target.Process), nil
 	case "signal.target.created_at":
 		return int(ev.FieldHandlers.ResolveProcessCreatedAt(ev, &ev.Signal.Target.Process)), nil
 	case "signal.target.egid":
@@ -23517,6 +23740,11 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 			return 0, &eval.ErrNotSupported{Field: field}
 		}
 		return int(ev.Signal.Target.Parent.Credentials.CapPermitted), nil
+	case "signal.target.parent.cgroup.id":
+		if !ev.Signal.Target.HasParent() {
+			return "", &eval.ErrNotSupported{Field: field}
+		}
+		return ev.Signal.Target.Parent.CGroup.ID, nil
 	case "signal.target.parent.comm":
 		if !ev.Signal.Target.HasParent() {
 			return "", &eval.ErrNotSupported{Field: field}
@@ -23526,7 +23754,7 @@ func (ev *Event) GetFieldValue(field eval.Field) (interface{}, error) {
 		if !ev.Signal.Target.HasParent() {
 			return "", &eval.ErrNotSupported{Field: field}
 		}
-		return ev.Signal.Target.Parent.ContainerID, nil
+		return ev.FieldHandlers.ResolveProcessContainerID(ev, ev.Signal.Target.Parent), nil
 	case "signal.target.parent.created_at":
 		if !ev.Signal.Target.HasParent() {
 			return 0, &eval.ErrNotSupported{Field: field}
@@ -24139,6 +24367,8 @@ func (ev *Event) GetFieldEventType(field eval.Field) (eval.EventType, error) {
 		return "capset", nil
 	case "capset.cap_permitted":
 		return "capset", nil
+	case "cgroup.id":
+		return "*", nil
 	case "chdir.file.change_time":
 		return "chdir", nil
 	case "chdir.file.filesystem":
@@ -24333,6 +24563,8 @@ func (ev *Event) GetFieldEventType(field eval.Field) (eval.EventType, error) {
 		return "exec", nil
 	case "exec.cap_permitted":
 		return "exec", nil
+	case "exec.cgroup.id":
+		return "exec", nil
 	case "exec.comm":
 		return "exec", nil
 	case "exec.container.id":
@@ -24486,6 +24718,8 @@ func (ev *Event) GetFieldEventType(field eval.Field) (eval.EventType, error) {
 	case "exit.cap_permitted":
 		return "exit", nil
 	case "exit.cause":
+		return "exit", nil
+	case "exit.cgroup.id":
 		return "exit", nil
 	case "exit.code":
 		return "exit", nil
@@ -24961,6 +25195,8 @@ func (ev *Event) GetFieldEventType(field eval.Field) (eval.EventType, error) {
 		return "*", nil
 	case "process.ancestors.cap_permitted":
 		return "*", nil
+	case "process.ancestors.cgroup.id":
+		return "*", nil
 	case "process.ancestors.comm":
 		return "*", nil
 	case "process.ancestors.container.id":
@@ -25111,6 +25347,8 @@ func (ev *Event) GetFieldEventType(field eval.Field) (eval.EventType, error) {
 		return "*", nil
 	case "process.cap_permitted":
 		return "*", nil
+	case "process.cgroup.id":
+		return "*", nil
 	case "process.comm":
 		return "*", nil
 	case "process.container.id":
@@ -25242,6 +25480,8 @@ func (ev *Event) GetFieldEventType(field eval.Field) (eval.EventType, error) {
 	case "process.parent.cap_effective":
 		return "*", nil
 	case "process.parent.cap_permitted":
+		return "*", nil
+	case "process.parent.cgroup.id":
 		return "*", nil
 	case "process.parent.comm":
 		return "*", nil
@@ -25415,6 +25655,8 @@ func (ev *Event) GetFieldEventType(field eval.Field) (eval.EventType, error) {
 		return "ptrace", nil
 	case "ptrace.tracee.ancestors.cap_permitted":
 		return "ptrace", nil
+	case "ptrace.tracee.ancestors.cgroup.id":
+		return "ptrace", nil
 	case "ptrace.tracee.ancestors.comm":
 		return "ptrace", nil
 	case "ptrace.tracee.ancestors.container.id":
@@ -25565,6 +25807,8 @@ func (ev *Event) GetFieldEventType(field eval.Field) (eval.EventType, error) {
 		return "ptrace", nil
 	case "ptrace.tracee.cap_permitted":
 		return "ptrace", nil
+	case "ptrace.tracee.cgroup.id":
+		return "ptrace", nil
 	case "ptrace.tracee.comm":
 		return "ptrace", nil
 	case "ptrace.tracee.container.id":
@@ -25696,6 +25940,8 @@ func (ev *Event) GetFieldEventType(field eval.Field) (eval.EventType, error) {
 	case "ptrace.tracee.parent.cap_effective":
 		return "ptrace", nil
 	case "ptrace.tracee.parent.cap_permitted":
+		return "ptrace", nil
+	case "ptrace.tracee.parent.cgroup.id":
 		return "ptrace", nil
 	case "ptrace.tracee.parent.comm":
 		return "ptrace", nil
@@ -26117,6 +26363,8 @@ func (ev *Event) GetFieldEventType(field eval.Field) (eval.EventType, error) {
 		return "signal", nil
 	case "signal.target.ancestors.cap_permitted":
 		return "signal", nil
+	case "signal.target.ancestors.cgroup.id":
+		return "signal", nil
 	case "signal.target.ancestors.comm":
 		return "signal", nil
 	case "signal.target.ancestors.container.id":
@@ -26267,6 +26515,8 @@ func (ev *Event) GetFieldEventType(field eval.Field) (eval.EventType, error) {
 		return "signal", nil
 	case "signal.target.cap_permitted":
 		return "signal", nil
+	case "signal.target.cgroup.id":
+		return "signal", nil
 	case "signal.target.comm":
 		return "signal", nil
 	case "signal.target.container.id":
@@ -26398,6 +26648,8 @@ func (ev *Event) GetFieldEventType(field eval.Field) (eval.EventType, error) {
 	case "signal.target.parent.cap_effective":
 		return "signal", nil
 	case "signal.target.parent.cap_permitted":
+		return "signal", nil
+	case "signal.target.parent.cgroup.id":
 		return "signal", nil
 	case "signal.target.parent.comm":
 		return "signal", nil
@@ -26724,6 +26976,8 @@ func (ev *Event) GetFieldType(field eval.Field) (reflect.Kind, error) {
 		return reflect.Int, nil
 	case "capset.cap_permitted":
 		return reflect.Int, nil
+	case "cgroup.id":
+		return reflect.String, nil
 	case "chdir.file.change_time":
 		return reflect.Int, nil
 	case "chdir.file.filesystem":
@@ -26918,6 +27172,8 @@ func (ev *Event) GetFieldType(field eval.Field) (reflect.Kind, error) {
 		return reflect.Int, nil
 	case "exec.cap_permitted":
 		return reflect.Int, nil
+	case "exec.cgroup.id":
+		return reflect.String, nil
 	case "exec.comm":
 		return reflect.String, nil
 	case "exec.container.id":
@@ -27072,6 +27328,8 @@ func (ev *Event) GetFieldType(field eval.Field) (reflect.Kind, error) {
 		return reflect.Int, nil
 	case "exit.cause":
 		return reflect.Int, nil
+	case "exit.cgroup.id":
+		return reflect.String, nil
 	case "exit.code":
 		return reflect.Int, nil
 	case "exit.comm":
@@ -27546,6 +27804,8 @@ func (ev *Event) GetFieldType(field eval.Field) (reflect.Kind, error) {
 		return reflect.Int, nil
 	case "process.ancestors.cap_permitted":
 		return reflect.Int, nil
+	case "process.ancestors.cgroup.id":
+		return reflect.String, nil
 	case "process.ancestors.comm":
 		return reflect.String, nil
 	case "process.ancestors.container.id":
@@ -27696,6 +27956,8 @@ func (ev *Event) GetFieldType(field eval.Field) (reflect.Kind, error) {
 		return reflect.Int, nil
 	case "process.cap_permitted":
 		return reflect.Int, nil
+	case "process.cgroup.id":
+		return reflect.String, nil
 	case "process.comm":
 		return reflect.String, nil
 	case "process.container.id":
@@ -27828,6 +28090,8 @@ func (ev *Event) GetFieldType(field eval.Field) (reflect.Kind, error) {
 		return reflect.Int, nil
 	case "process.parent.cap_permitted":
 		return reflect.Int, nil
+	case "process.parent.cgroup.id":
+		return reflect.String, nil
 	case "process.parent.comm":
 		return reflect.String, nil
 	case "process.parent.container.id":
@@ -28000,6 +28264,8 @@ func (ev *Event) GetFieldType(field eval.Field) (reflect.Kind, error) {
 		return reflect.Int, nil
 	case "ptrace.tracee.ancestors.cap_permitted":
 		return reflect.Int, nil
+	case "ptrace.tracee.ancestors.cgroup.id":
+		return reflect.String, nil
 	case "ptrace.tracee.ancestors.comm":
 		return reflect.String, nil
 	case "ptrace.tracee.ancestors.container.id":
@@ -28150,6 +28416,8 @@ func (ev *Event) GetFieldType(field eval.Field) (reflect.Kind, error) {
 		return reflect.Int, nil
 	case "ptrace.tracee.cap_permitted":
 		return reflect.Int, nil
+	case "ptrace.tracee.cgroup.id":
+		return reflect.String, nil
 	case "ptrace.tracee.comm":
 		return reflect.String, nil
 	case "ptrace.tracee.container.id":
@@ -28282,6 +28550,8 @@ func (ev *Event) GetFieldType(field eval.Field) (reflect.Kind, error) {
 		return reflect.Int, nil
 	case "ptrace.tracee.parent.cap_permitted":
 		return reflect.Int, nil
+	case "ptrace.tracee.parent.cgroup.id":
+		return reflect.String, nil
 	case "ptrace.tracee.parent.comm":
 		return reflect.String, nil
 	case "ptrace.tracee.parent.container.id":
@@ -28702,6 +28972,8 @@ func (ev *Event) GetFieldType(field eval.Field) (reflect.Kind, error) {
 		return reflect.Int, nil
 	case "signal.target.ancestors.cap_permitted":
 		return reflect.Int, nil
+	case "signal.target.ancestors.cgroup.id":
+		return reflect.String, nil
 	case "signal.target.ancestors.comm":
 		return reflect.String, nil
 	case "signal.target.ancestors.container.id":
@@ -28852,6 +29124,8 @@ func (ev *Event) GetFieldType(field eval.Field) (reflect.Kind, error) {
 		return reflect.Int, nil
 	case "signal.target.cap_permitted":
 		return reflect.Int, nil
+	case "signal.target.cgroup.id":
+		return reflect.String, nil
 	case "signal.target.comm":
 		return reflect.String, nil
 	case "signal.target.container.id":
@@ -28984,6 +29258,8 @@ func (ev *Event) GetFieldType(field eval.Field) (reflect.Kind, error) {
 		return reflect.Int, nil
 	case "signal.target.parent.cap_permitted":
 		return reflect.Int, nil
+	case "signal.target.parent.cgroup.id":
+		return reflect.String, nil
 	case "signal.target.parent.comm":
 		return reflect.String, nil
 	case "signal.target.parent.container.id":
@@ -29388,6 +29664,13 @@ func (ev *Event) SetFieldValue(field eval.Field, value interface{}) error {
 			return &eval.ErrValueTypeMismatch{Field: "Capset.CapPermitted"}
 		}
 		ev.Capset.CapPermitted = uint64(rv)
+		return nil
+	case "cgroup.id":
+		rv, ok := value.(string)
+		if !ok {
+			return &eval.ErrValueTypeMismatch{Field: "BaseEvent.CGroupContext.ID"}
+		}
+		ev.BaseEvent.CGroupContext.ID = rv
 		return nil
 	case "chdir.file.change_time":
 		rv, ok := value.(int)
@@ -29888,9 +30171,9 @@ func (ev *Event) SetFieldValue(field eval.Field, value interface{}) error {
 		}
 		rv, ok := value.(string)
 		if !ok {
-			return &eval.ErrValueTypeMismatch{Field: "BaseEvent.ContainerContext.ID"}
+			return &eval.ErrValueTypeMismatch{Field: "BaseEvent.ContainerContext.ContainerID"}
 		}
-		ev.BaseEvent.ContainerContext.ID = rv
+		ev.BaseEvent.ContainerContext.ContainerID = rv
 		return nil
 	case "container.runtime":
 		if ev.BaseEvent.ContainerContext == nil {
@@ -30089,6 +30372,16 @@ func (ev *Event) SetFieldValue(field eval.Field, value interface{}) error {
 			return &eval.ErrValueTypeMismatch{Field: "Exec.Process.Credentials.CapPermitted"}
 		}
 		ev.Exec.Process.Credentials.CapPermitted = uint64(rv)
+		return nil
+	case "exec.cgroup.id":
+		if ev.Exec.Process == nil {
+			ev.Exec.Process = &Process{}
+		}
+		rv, ok := value.(string)
+		if !ok {
+			return &eval.ErrValueTypeMismatch{Field: "Exec.Process.CGroup.ID"}
+		}
+		ev.Exec.Process.CGroup.ID = rv
 		return nil
 	case "exec.comm":
 		if ev.Exec.Process == nil {
@@ -30857,6 +31150,16 @@ func (ev *Event) SetFieldValue(field eval.Field, value interface{}) error {
 			return &eval.ErrValueTypeMismatch{Field: "Exit.Cause"}
 		}
 		ev.Exit.Cause = uint32(rv)
+		return nil
+	case "exit.cgroup.id":
+		if ev.Exit.Process == nil {
+			ev.Exit.Process = &Process{}
+		}
+		rv, ok := value.(string)
+		if !ok {
+			return &eval.ErrValueTypeMismatch{Field: "Exit.Process.CGroup.ID"}
+		}
+		ev.Exit.Process.CGroup.ID = rv
 		return nil
 	case "exit.code":
 		rv, ok := value.(int)
@@ -32731,6 +33034,19 @@ func (ev *Event) SetFieldValue(field eval.Field, value interface{}) error {
 		}
 		ev.BaseEvent.ProcessContext.Ancestor.ProcessContext.Process.Credentials.CapPermitted = uint64(rv)
 		return nil
+	case "process.ancestors.cgroup.id":
+		if ev.BaseEvent.ProcessContext == nil {
+			ev.BaseEvent.ProcessContext = &ProcessContext{}
+		}
+		if ev.BaseEvent.ProcessContext.Ancestor == nil {
+			ev.BaseEvent.ProcessContext.Ancestor = &ProcessCacheEntry{}
+		}
+		rv, ok := value.(string)
+		if !ok {
+			return &eval.ErrValueTypeMismatch{Field: "BaseEvent.ProcessContext.Ancestor.ProcessContext.Process.CGroup.ID"}
+		}
+		ev.BaseEvent.ProcessContext.Ancestor.ProcessContext.Process.CGroup.ID = rv
+		return nil
 	case "process.ancestors.comm":
 		if ev.BaseEvent.ProcessContext == nil {
 			ev.BaseEvent.ProcessContext = &ProcessContext{}
@@ -33686,6 +34002,16 @@ func (ev *Event) SetFieldValue(field eval.Field, value interface{}) error {
 		}
 		ev.BaseEvent.ProcessContext.Process.Credentials.CapPermitted = uint64(rv)
 		return nil
+	case "process.cgroup.id":
+		if ev.BaseEvent.ProcessContext == nil {
+			ev.BaseEvent.ProcessContext = &ProcessContext{}
+		}
+		rv, ok := value.(string)
+		if !ok {
+			return &eval.ErrValueTypeMismatch{Field: "BaseEvent.ProcessContext.Process.CGroup.ID"}
+		}
+		ev.BaseEvent.ProcessContext.Process.CGroup.ID = rv
+		return nil
 	case "process.comm":
 		if ev.BaseEvent.ProcessContext == nil {
 			ev.BaseEvent.ProcessContext = &ProcessContext{}
@@ -34370,6 +34696,19 @@ func (ev *Event) SetFieldValue(field eval.Field, value interface{}) error {
 			return &eval.ErrValueTypeMismatch{Field: "BaseEvent.ProcessContext.Parent.Credentials.CapPermitted"}
 		}
 		ev.BaseEvent.ProcessContext.Parent.Credentials.CapPermitted = uint64(rv)
+		return nil
+	case "process.parent.cgroup.id":
+		if ev.BaseEvent.ProcessContext == nil {
+			ev.BaseEvent.ProcessContext = &ProcessContext{}
+		}
+		if ev.BaseEvent.ProcessContext.Parent == nil {
+			ev.BaseEvent.ProcessContext.Parent = &Process{}
+		}
+		rv, ok := value.(string)
+		if !ok {
+			return &eval.ErrValueTypeMismatch{Field: "BaseEvent.ProcessContext.Parent.CGroup.ID"}
+		}
+		ev.BaseEvent.ProcessContext.Parent.CGroup.ID = rv
 		return nil
 	case "process.parent.comm":
 		if ev.BaseEvent.ProcessContext == nil {
@@ -35457,6 +35796,19 @@ func (ev *Event) SetFieldValue(field eval.Field, value interface{}) error {
 		}
 		ev.PTrace.Tracee.Ancestor.ProcessContext.Process.Credentials.CapPermitted = uint64(rv)
 		return nil
+	case "ptrace.tracee.ancestors.cgroup.id":
+		if ev.PTrace.Tracee == nil {
+			ev.PTrace.Tracee = &ProcessContext{}
+		}
+		if ev.PTrace.Tracee.Ancestor == nil {
+			ev.PTrace.Tracee.Ancestor = &ProcessCacheEntry{}
+		}
+		rv, ok := value.(string)
+		if !ok {
+			return &eval.ErrValueTypeMismatch{Field: "PTrace.Tracee.Ancestor.ProcessContext.Process.CGroup.ID"}
+		}
+		ev.PTrace.Tracee.Ancestor.ProcessContext.Process.CGroup.ID = rv
+		return nil
 	case "ptrace.tracee.ancestors.comm":
 		if ev.PTrace.Tracee == nil {
 			ev.PTrace.Tracee = &ProcessContext{}
@@ -36412,6 +36764,16 @@ func (ev *Event) SetFieldValue(field eval.Field, value interface{}) error {
 		}
 		ev.PTrace.Tracee.Process.Credentials.CapPermitted = uint64(rv)
 		return nil
+	case "ptrace.tracee.cgroup.id":
+		if ev.PTrace.Tracee == nil {
+			ev.PTrace.Tracee = &ProcessContext{}
+		}
+		rv, ok := value.(string)
+		if !ok {
+			return &eval.ErrValueTypeMismatch{Field: "PTrace.Tracee.Process.CGroup.ID"}
+		}
+		ev.PTrace.Tracee.Process.CGroup.ID = rv
+		return nil
 	case "ptrace.tracee.comm":
 		if ev.PTrace.Tracee == nil {
 			ev.PTrace.Tracee = &ProcessContext{}
@@ -37096,6 +37458,19 @@ func (ev *Event) SetFieldValue(field eval.Field, value interface{}) error {
 			return &eval.ErrValueTypeMismatch{Field: "PTrace.Tracee.Parent.Credentials.CapPermitted"}
 		}
 		ev.PTrace.Tracee.Parent.Credentials.CapPermitted = uint64(rv)
+		return nil
+	case "ptrace.tracee.parent.cgroup.id":
+		if ev.PTrace.Tracee == nil {
+			ev.PTrace.Tracee = &ProcessContext{}
+		}
+		if ev.PTrace.Tracee.Parent == nil {
+			ev.PTrace.Tracee.Parent = &Process{}
+		}
+		rv, ok := value.(string)
+		if !ok {
+			return &eval.ErrValueTypeMismatch{Field: "PTrace.Tracee.Parent.CGroup.ID"}
+		}
+		ev.PTrace.Tracee.Parent.CGroup.ID = rv
 		return nil
 	case "ptrace.tracee.parent.comm":
 		if ev.PTrace.Tracee == nil {
@@ -39016,6 +39391,19 @@ func (ev *Event) SetFieldValue(field eval.Field, value interface{}) error {
 		}
 		ev.Signal.Target.Ancestor.ProcessContext.Process.Credentials.CapPermitted = uint64(rv)
 		return nil
+	case "signal.target.ancestors.cgroup.id":
+		if ev.Signal.Target == nil {
+			ev.Signal.Target = &ProcessContext{}
+		}
+		if ev.Signal.Target.Ancestor == nil {
+			ev.Signal.Target.Ancestor = &ProcessCacheEntry{}
+		}
+		rv, ok := value.(string)
+		if !ok {
+			return &eval.ErrValueTypeMismatch{Field: "Signal.Target.Ancestor.ProcessContext.Process.CGroup.ID"}
+		}
+		ev.Signal.Target.Ancestor.ProcessContext.Process.CGroup.ID = rv
+		return nil
 	case "signal.target.ancestors.comm":
 		if ev.Signal.Target == nil {
 			ev.Signal.Target = &ProcessContext{}
@@ -39971,6 +40359,16 @@ func (ev *Event) SetFieldValue(field eval.Field, value interface{}) error {
 		}
 		ev.Signal.Target.Process.Credentials.CapPermitted = uint64(rv)
 		return nil
+	case "signal.target.cgroup.id":
+		if ev.Signal.Target == nil {
+			ev.Signal.Target = &ProcessContext{}
+		}
+		rv, ok := value.(string)
+		if !ok {
+			return &eval.ErrValueTypeMismatch{Field: "Signal.Target.Process.CGroup.ID"}
+		}
+		ev.Signal.Target.Process.CGroup.ID = rv
+		return nil
 	case "signal.target.comm":
 		if ev.Signal.Target == nil {
 			ev.Signal.Target = &ProcessContext{}
@@ -40655,6 +41053,19 @@ func (ev *Event) SetFieldValue(field eval.Field, value interface{}) error {
 			return &eval.ErrValueTypeMismatch{Field: "Signal.Target.Parent.Credentials.CapPermitted"}
 		}
 		ev.Signal.Target.Parent.Credentials.CapPermitted = uint64(rv)
+		return nil
+	case "signal.target.parent.cgroup.id":
+		if ev.Signal.Target == nil {
+			ev.Signal.Target = &ProcessContext{}
+		}
+		if ev.Signal.Target.Parent == nil {
+			ev.Signal.Target.Parent = &Process{}
+		}
+		rv, ok := value.(string)
+		if !ok {
+			return &eval.ErrValueTypeMismatch{Field: "Signal.Target.Parent.CGroup.ID"}
+		}
+		ev.Signal.Target.Parent.CGroup.ID = rv
 		return nil
 	case "signal.target.parent.comm":
 		if ev.Signal.Target == nil {
