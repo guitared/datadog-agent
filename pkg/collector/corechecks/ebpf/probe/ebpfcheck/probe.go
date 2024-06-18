@@ -239,6 +239,14 @@ func (k *Probe) getProgramStats(stats *model.EBPFStats) error {
 	uniquePrograms := make(map[programKey]struct{})
 	progid := ebpf.ProgramID(0)
 	for progid, err = ebpf.ProgramGetNextID(progid); err == nil; progid, err = ebpf.ProgramGetNextID(progid) {
+		// skip programs generated on the flight for hash map entry counting with helper
+		mappingLock.RLock()
+		_, shouldIgnore := progIgnoredIds[progid]
+		mappingLock.RUnlock()
+		if shouldIgnore {
+			continue
+		}
+
 		fd, err := ProgGetFdByID(&ProgGetFdByIDAttr{ID: uint32(progid)})
 		if err != nil {
 			log.Debugf("error getting program fd prog_id=%d: %s", progid, err)
@@ -1017,6 +1025,15 @@ func hashMapNumberOfEntriesWithHelper(mp *ebpf.Map) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+
+	info, err := prog.Info()
+	if err != nil {
+		log.Warnf("failed to fetch info for helper program: %v", err)
+	} else if id, ok := info.ID(); ok {
+		AddIgnoredProgramID(id)
+		defer RemoveIgnoredProgramID(id)
+	}
+
 	defer prog.Close()
 
 	res, _, err := prog.Test(make([]byte, 32))

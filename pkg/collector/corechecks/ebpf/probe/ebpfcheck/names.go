@@ -22,6 +22,8 @@ var mapModuleMapping = make(map[uint32]string)
 var progNameMapping = make(map[uint32]string)
 var progModuleMapping = make(map[uint32]string)
 
+var progIgnoredIds = make(map[ebpf.ProgramID]struct{})
+
 // AddProgramNameMapping manually adds a program name mapping
 func AddProgramNameMapping(progid uint32, name string, module string) {
 	mappingLock.Lock()
@@ -139,4 +141,20 @@ func iterateProgs(progs map[string]*ebpf.Program, mapFn func(progid uint32, name
 			}
 		}
 	}
+}
+
+// AddIgnoredProgramID adds a program ID to the list of ignored programs
+func AddIgnoredProgramID(id ebpf.ProgramID) {
+	mappingLock.Lock()
+	defer mappingLock.Unlock()
+
+	progIgnoredIds[id] = struct{}{}
+}
+
+// RemoveIgnoredProgramID removes a program ID from the list of ignored programs
+func RemoveIgnoredProgramID(id ebpf.ProgramID) {
+	mappingLock.Lock()
+	defer mappingLock.Unlock()
+
+	progIgnoredIds[id] = struct{}{}
 }
