@@ -93,7 +93,21 @@ func (o *Copy) CopyToPod(localFile string, remoteFile string, pod *corev1.Pod, c
 		},
 		Stdin: true,
 	}
-	return o.execute(pod, cmdArr, streamOptions)
+
+	if err := o.execute(pod, cmdArr, streamOptions); err != nil {
+		return err
+	}
+
+	// check if there are any errors
+	outData := o.out.String()
+	errData := o.errOut.String()
+	if len(errData) > 0 && errData != "<nil>" {
+		return fmt.Errorf("failed to copy %s to pod %s: %s", localFile, remoteFile, errData)
+	}
+	if len(outData) > 0 && outData != "<nil>" {
+		log.Infof("data while copying %s to pod %s: %s", localFile, remoteFile, outData)
+	}
+	return nil
 }
 
 func (o *Copy) execute(pod *corev1.Pod, command []string, streamOptions StreamOptions) error {
@@ -104,10 +118,6 @@ func (o *Copy) execute(pod *corev1.Pod, command []string, streamOptions StreamOp
 	if t.Raw {
 		// this call spawns a goroutine to monitor/update the terminal size
 		sizeQueue = t.MonitorSize(t.GetSize())
-
-		// unset p.Err if it was previously set because both stdout and stderr go over p.Out when tty is
-		// true
-		streamOptions.ErrOut = nil
 	}
 
 	fn := func() error {
