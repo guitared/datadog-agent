@@ -110,10 +110,6 @@ static __attribute__((always_inline)) int trace__cgroup_write(ctx_t *ctx) {
     bpf_probe_read(&new_entry.container.container_id, sizeof(new_entry.container.container_id), container_id);
     new_entry.container.flags = container_flags;
 
-    if (!is_container_id_valid(new_entry.container.container_id)) {
-        return 0;
-    }
-
     bpf_map_update_elem(&proc_cache, &cookie, &new_entry, BPF_ANY);
 
     if (new_cookie) {
@@ -122,6 +118,11 @@ static __attribute__((always_inline)) int trace__cgroup_write(ctx_t *ctx) {
         };
         bpf_map_update_elem(&pid_cache, &pid, &new_pid_entry, BPF_ANY);
     }
+
+    if (!is_container_id_valid(new_entry.container.container_id)) {
+        return 0;
+    }
+
     return 0;
 }
 
