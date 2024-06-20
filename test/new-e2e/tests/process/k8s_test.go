@@ -11,6 +11,7 @@ import (
 	_ "embed"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"text/template"
 
@@ -21,7 +22,9 @@ import (
 	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubeClient "k8s.io/client-go/kubernetes"
 
 	"github.com/DataDog/datadog-agent/test/new-e2e/pkg/e2e"
 	"github.com/DataDog/datadog-agent/test/new-e2e/pkg/environments"
@@ -88,4 +91,28 @@ func (s *K8sSuite) TestWorkloadsInstalled() {
 
 	res, _ = s.Env().KubernetesCluster.Client().CoreV1().Pods("workload-stress").List(context.TODO(), v1.ListOptions{})
 	assert.NotEmpty(s.T(), res.Items)
+}
+
+func (s *K8sSuite) TestManualProcessCheck() {
+	agent := getAgentPod(s.T(), s.Env().KubernetesCluster.Client())
+
+	stdout, stderr, err := s.Env().KubernetesCluster.KubernetesClient.
+		PodExec(agent.Namespace, agent.Name, "process-agent", []string{"process-agent", "check", "process", "--json"})
+	require.NoError(s.T(), err)
+	assert.Empty(s.T(), stderr)
+
+	// TODO: investigate why logging is not disabled for json output in k8s
+	jsonStart := strings.Index(stdout, "{")
+	require.NotEqual(s.T(), -1, jsonStart)
+
+	assertManualProcessCheck(s.T(), stdout[jsonStart:], false, "/usr/bin/stress-ng", "stress-ng")
+}
+
+func getAgentPod(t *testing.T, client kubeClient.Interface) corev1.Pod {
+	res, err := client.CoreV1().Pods("datadog").
+		List(context.Background(), v1.ListOptions{LabelSelector: "app=dda-linux-datadog"})
+	require.NoError(t, err)
+	require.NotEmpty(t, res.Items)
+
+	return res.Items[0]
 }
